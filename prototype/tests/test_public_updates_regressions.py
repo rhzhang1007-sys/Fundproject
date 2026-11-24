@@ -19,6 +19,25 @@ def row(pid='123'):
     return dict(id=pid,objectId='stock300750',title='宁德时代订单100亿元',content='网友提出观点',comments=[{'text':'同比10%','replyTo':''}],url='https://example.com/'+pid)
 
 class Regressions(unittest.TestCase):
+    def test_verified_gateway_price_and_base_url_need_no_manual_rate_guess(self):
+        catalog=dict(reviewAfter='2999-12-31',sourceUrl='https://doc.zhizengzeng.com/doc-3979947',verifiedAt='2026-11-24',basis='published-list-price-before-discount',entries=[dict(host='api.zhizengzeng.com',model='glm-5.3-flashx',input=2,output=7)])
+        env=dict(LLM_API_URL='https://api.zhizengzeng.com',LLM_API_KEY='test-only',LLM_MODEL='glm-5.3-flashx')
+        with patch.dict(os.environ,env,clear=True),patch.object(u,'load',return_value=catalog):
+            self.assertEqual(u.llm_config()[0],'https://api.zhizengzeng.com/v1/chat/completions')
+            self.assertEqual(u._price(),(2,7));self.assertEqual(u.pricing_details()['source'],'verified-provider-reference')
+            with patch.dict(os.environ,{'LLM_PRICE_IN':'1.8'}):self.assertEqual(u._price(),(1.8,None))
+            with patch.dict(os.environ,{'LLM_API_URL':'https://other.example/v1/chat/completions'}):self.assertEqual(u._price(),(None,None))
+    def test_truncated_reasoning_output_is_charged_once_and_not_format_retried(self):
+        from io import BytesIO
+        class Response(BytesIO):pass
+        data=dict(usage=dict(prompt_tokens=10,completion_tokens=100),choices=[dict(finish_reason='length',message=dict(content=''))])
+        with tempfile.TemporaryDirectory() as t,patch.dict(os.environ,dict(LLM_API_URL='https://api.zhizengzeng.com',LLM_API_KEY='test-only',LLM_MODEL='glm-5.3-flashx',LLM_PRICE_IN='2',LLM_PRICE_OUT='7',LLM_DAILY_BUDGET='5'),clear=True):
+            u.init_llm(Path(t)/'ledger.json','2026-11-24')
+            with patch.object(u,'urlopen',return_value=Response(json.dumps(data).encode())) as request:
+                self.assertIsNone(u.llm_json('返回JSON','测试'))
+                body=json.loads(request.call_args.args[0].data)
+                self.assertEqual(body['max_tokens'],8192);self.assertEqual(body['temperature'],1);self.assertEqual(request.call_count,1)
+            self.assertEqual(u.LLM_STATE['lastSkip'],'output-truncated');self.assertAlmostEqual(u.LLM_STATE['costCNY'],0.00072)
     def test_empty_day_is_valid_not_latest_page_fallback(self):
         self.assertEqual(u.forum_day(lambda url:json.dumps({'re':[]}), '300750','2026-11-23'),[])
     def test_old_pinned_post_does_not_stop_paging(self):

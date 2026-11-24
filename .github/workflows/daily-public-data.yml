@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/daily-public-data.yml'
       - 'prototype/scripts/**'
-      - 'prototype/config/public-updates.json'
+      - 'prototype/config/**'
       - 'prototype/requirements-daily.txt'
   schedule:
     # 08:30 Asia/Shanghai; GitHub scheduling can be delayed.
@@ -38,7 +38,7 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_public_updates*.py'
           python -m unittest discover -s prototype/tests -p 'test_news_pipeline.py'
       - name: Validate website data interfaces
-        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs
+        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
       - name: Check runtime configuration without collecting
         env:
           LLM_API_URL: ${{ secrets.LLM_API_URL }}
@@ -79,7 +79,7 @@ jobs:
           ready=json.loads(status.read_text()) if status.exists() else {}
           paths=['prototype/dist/data/v09/update-status.json','prototype/dist/data/v08/llm-usage.json','prototype/dist/data/v08/llm-usage','prototype/dist/data/v08/llm-cache.json','output/抽检-每日']
           if ready.get('newsReady'): paths+=['prototype/dist/data/v07/events.json','prototype/dist/data/archive']
-          if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json']
+          if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
           # A successful earlier forum object is retained even if a later source failed.
           paths+=['prototype/dist/data/v08/forum.json']
           existing=[p for p in paths if Path(p).exists()]

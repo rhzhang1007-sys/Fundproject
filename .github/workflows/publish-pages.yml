@@ -40,7 +40,7 @@ jobs:
           python-version: '3.12'
       - name: Test application and prepare public-only directory
         run: |
-          node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs
+          node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
           python prototype/scripts/prepare_v08_public_site.py --destination tmp/public-site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

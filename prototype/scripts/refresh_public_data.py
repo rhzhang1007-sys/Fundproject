@@ -295,7 +295,12 @@ def match_entities(text, entities):
 
 def llm_config():
     values=tuple(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL'))
-    return values if all(values) else (None,None,None)
+    if not all(values):return (None,None,None)
+    url,key,model=values;p=urlparse(url.strip())
+    # This gateway documents an OpenAI-compatible /v1/chat/completions endpoint.
+    if p.hostname=='api.zhizengzeng.com' and p.path.rstrip('/') in ('','/v1') and not p.query and not p.fragment:
+        url='https://api.zhizengzeng.com/v1/chat/completions'
+    return url,key,model.strip()
 
 
 def _positive_env(name, default=None):
@@ -306,8 +311,23 @@ def _positive_env(name, default=None):
     return n
 
 
+def pricing_details():
+    pin,pout=_positive_env('LLM_PRICE_IN'),_positive_env('LLM_PRICE_OUT')
+    if pin is not None or pout is not None:
+        return dict(input=pin,output=pout,source='configured-variables',basis='configured-budget-reference')
+    url,_,model=llm_config();catalog=load(ROOT/'prototype/config/llm-pricing.json',{})
+    if not url or not model:return dict(input=None,output=None,source='missing')
+    today=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
+    if today>catalog.get('reviewAfter',''):return dict(input=None,output=None,source='reference-needs-review')
+    for entry in catalog.get('entries',[]):
+        if entry['host']==urlparse(url).hostname and entry['model']==model.lower():
+            return dict(input=entry['input'],output=entry['output'],source='verified-provider-reference',
+                sourceUrl=catalog['sourceUrl'],verifiedAt=catalog['verifiedAt'],basis=catalog['basis'])
+    return dict(input=None,output=None,source='missing')
+
+
 def _price():
-    return _positive_env('LLM_PRICE_IN'),_positive_env('LLM_PRICE_OUT')
+    d=pricing_details();return d['input'],d['output']
 
 
 def _budget():
@@ -328,6 +348,7 @@ def init_llm(path, day):
         costCNY=0.0,reservedCNY=0.0,unknownUsageCalls=0,stoppedByBudget=False,skipped=[]).items():
         LLM_STATE.setdefault(k,v)
     LLM_STATE.update(budgetCNY=_budget(), priceCNYPerMillion=dict(zip(('in','out'),_price())))
+    LLM_STATE.update(pricing=pricing_details(),costIsEstimate=True)
 
 
 def persist_usage():
@@ -382,7 +403,9 @@ def _post_llm(url, key, model, messages, max_tokens):
     LLM_STATE['reservedCNY']+=reservation; LLM_STATE['calls']+=1
     # Journal before the paid request. Interrupted/failed calls keep the reservation on rerun.
     persist_usage()
-    body=json.dumps(dict(model=model,temperature=0,max_tokens=max_tokens,messages=messages)).encode()
+    options=dict(model=model,temperature=1 if model.lower().startswith('glm-5.3') else 0,max_tokens=max_tokens,messages=messages)
+    if model.lower().startswith('glm-5.3'):options['response_format']={'type':'json_object'}
+    body=json.dumps(options).encode()
     req=Request(url,data=body,headers={'Content-Type':'application/json','Authorization':'Bearer '+key})
     try:
         with urlopen(req,timeout=90) as response: data=json.loads(response.read(4_000_001))
@@ -393,16 +416,20 @@ def _post_llm(url, key, model, messages, max_tokens):
             LLM_STATE['promptTokens']+=a; LLM_STATE['completionTokens']+=b
             LLM_STATE['costCNY']+=(a*pin+b*pout)/1_000_000
         else: LLM_STATE['unknownUsageCalls']+=1
+        if data.get('choices',[{}])[0].get('finish_reason')=='length':
+            LLM_STATE['lastSkip']='output-truncated';return None
         return data['choices'][0]['message']['content']
     except (OSError,ValueError,KeyError,TypeError,IndexError):
         LLM_STATE['unknownUsageCalls']+=1; LLM_STATE['lastSkip']='model-error'; return None
     finally: persist_usage()
 
 
-def llm_json(system,user,max_tokens=700):
+def llm_json(system,user,max_tokens=None):
     LLM_STATE.pop('lastSkip',None)
     url,key,model=llm_config()
     if not url: LLM_STATE['lastSkip']='no-model'; return None
+    # GLM-5.3 always reasons; 700 tokens can be consumed before the JSON answer.
+    if max_tokens is None:max_tokens=8192 if model.lower().startswith('glm-5.3') else 1600
     messages=[dict(role='system',content=system),dict(role='user',content=user)]
     text=_post_llm(url,key,model,messages,max_tokens)
     if text is None: return None
@@ -413,7 +440,7 @@ def llm_json(system,user,max_tokens=700):
     return parse_json_loose(fixed)
 
 
-PROMPT_VERSION='forum-claims-2026-11-24-v3-chunks'
+PROMPT_VERSION='forum-claims-2026-11-24-v4-reasoning-cap'
 
 
 def claim_material(row):

@@ -1,6 +1,7 @@
 """Daily public board flows and dated CSI valuation observations, without LLM arithmetic."""
 from datetime import datetime
 from io import BytesIO
+import hashlib
 import json
 import math
 from urllib.parse import urlencode
@@ -19,7 +20,7 @@ def board_page(data,kind):
         code=x.get('f12');name=x.get('f14');stamp=number(x.get('f124'))
         if not isinstance(code,str) or not code.startswith('BK') or not isinstance(name,str) or not stamp:raise ValueError('Board identity/date missing')
         date=datetime.fromtimestamp(stamp,ZoneInfo('Asia/Shanghai')).date().isoformat()
-        rows.append(dict(id=code,name=name,kind=kind,asOf=date,close=number(x.get('f2')),changePercent=number(x.get('f3')),
+        rows.append(dict(id=code,name=name,kind=kind,asOf=date,sourceTimestamp=datetime.fromtimestamp(stamp,ZoneInfo('Asia/Shanghai')).isoformat(),close=number(x.get('f2')),changePercent=number(x.get('f3')),
             mainNetFlowCNY=number(x.get('f62')),mainNetFlowRatioPercent=number(x.get('f184')),
             flowDefinition='provider-size-classified-main-order-net-traded-value',flowUnit='CNY',
             scheme='eastmoney-'+kind+'-board; levels-and-constituents-may-overlap',
@@ -33,8 +34,9 @@ def collect_boards(fetch,end,max_pages=30):
         seen=set();all_rows=[];total=0
         for page in range(1,max_pages+1):
             params=dict(pn=page,pz=100,np=1,fs=f'm:90+t:{type_code}',fields='f12,f14,f62,f184,f2,f3,f124',fid='f62',po=1,fltt=2,invt=2,ut=QUOTE_UT)
-            data=json.loads(fetch('https://push2.eastmoney.com/api/qt/clist/get?'+urlencode(params)))
+            raw=fetch('https://push2.eastmoney.com/api/qt/clist/get?'+urlencode(params));data=json.loads(raw)
             part,total=board_page(data,kind)
+            for row in part:row.update(sourceRetrievedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),sourcePayloadSha256=hashlib.sha256(raw.encode()).hexdigest())
             signature=tuple(x['id'] for x in part)
             if signature and signature in seen:raise ValueError('Board pagination repeated')
             seen.add(signature);all_rows+=part
@@ -54,7 +56,7 @@ def valuation_xls(raw,expected_code,end):
     book=xlrd.open_workbook(file_contents=raw);sheet=book.sheet_by_index(0)
     header=sheet.row_values(0)
     if len(header)!=10 or '总股本' not in str(header[6]) or '计算用股本' not in str(header[7]):raise ValueError('CSI valuation columns changed')
-    rows=[]
+    rows=[];digest=hashlib.sha256(raw).hexdigest()
     for i in range(1,sheet.nrows):
         row=sheet.row_values(i);date=datetime.strptime(str(row[0]).split('.')[0],'%Y%m%d').date().isoformat()
         code=str(row[1]).split('.')[0]
@@ -64,14 +66,23 @@ def valuation_xls(raw,expected_code,end):
             dividendYieldTotalSharesPercent=number(row[8]),dividendYieldCalculationSharesPercent=number(row[9]),
             metricLabels=dict(peTotalShares=header[6],peCalculationShares=header[7]),
             pb=None,percentiles=None,percentileStatus='history-window-and-method-not-approved',
-            sourceUrl=f'https://www.csindex.com.cn/zh-CN/indices/index-detail/{code}'))
+            sourceUrl=f'https://www.csindex.com.cn/zh-CN/indices/index-detail/{code}',
+            sourceFileUrl=f'https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/file/autofile/indicator/{code}indicator.xls',sourcePayloadSha256=digest))
     if not rows or len({r['asOf'] for r in rows})!=len(rows):raise ValueError('Empty/duplicate valuation observations')
     return rows
 
 
 def merge_valuations(previous,incoming):
     rows={(r['indexCode'],r['asOf']):r for r in previous}
-    for r in incoming:rows[(r['indexCode'],r['asOf'])]=r
+    fields=['peTotalShares','peCalculationShares','dividendYieldTotalSharesPercent','dividendYieldCalculationSharesPercent','pb','metricLabels']
+    for r in incoming:
+        key=(r['indexCode'],r['asOf']);old=rows.get(key);current=dict(r)
+        if old:
+            revisions=list(old.get('revisions',[]))
+            if any(old.get(k)!=r.get(k) for k in fields):revisions.append({k:v for k,v in old.items() if k!='revisions'})
+            if revisions:current['revisions']=revisions
+            current['firstRetrievedAt']=old.get('firstRetrievedAt') or old.get('sourceRetrievedAt')
+        rows[key]=current
     return sorted(rows.values(),key=lambda r:(r['indexCode'],r['asOf']))
 
 
@@ -80,5 +91,7 @@ def collect_valuations(fetch_binary,codes,end):
     for code in codes:
         if not str(code).isalnum():raise ValueError('Invalid index code')
         url=f'https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/file/autofile/indicator/{code}indicator.xls'
-        records+=valuation_xls(fetch_binary(url),str(code),end)
+        raw=fetch_binary(url);observations=valuation_xls(raw,str(code),end)
+        for row in observations:row['sourceRetrievedAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
+        records+=observations
     return records

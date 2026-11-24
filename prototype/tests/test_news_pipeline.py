@@ -49,6 +49,9 @@ class NewsPipeline(unittest.TestCase):
     def test_market_history_deduplicates_dates_without_inventing_percentile(self):
         a=dict(indexCode='930997',asOf='2026-11-23',peTotalShares=20,percentiles=None)
         merged=m.merge_valuations([a],[{**a,'peTotalShares':21}]);self.assertEqual(len(merged),1);self.assertIsNone(merged[0]['percentiles'])
+        self.assertEqual(merged[0]['revisions'][0]['peTotalShares'],20)
+        checked=m.merge_valuations(merged,[{**a,'peTotalShares':21}])
+        self.assertEqual(len(checked[0]['revisions']),1)
     def test_offline_preflight_makes_no_network_calls(self):
         with tempfile.TemporaryDirectory() as t,patch.object(d,'CurlPublicFetcher',side_effect=AssertionError('offline')):
             report=d.run(Path(t),{'enabled':False});self.assertFalse(report['collectionEnabled']);self.assertFalse(report['sourceFilesReady'])

@@ -1,0 +1,51 @@
+name: Check model connection
+on:
+  push:
+    branches: [main]
+    paths: ['prototype/config/model-check-request.json']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: daily-public-data-collection
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify one response within the shared daily budget
+        env:
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
+          LLM_PRICE_IN: ${{ vars.LLM_PRICE_IN }}
+          LLM_PRICE_OUT: ${{ vars.LLM_PRICE_OUT }}
+        run: python prototype/scripts/check_model_connection.py
+      - name: Persist result and budget
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add prototype/dist/data/v09/model-check.json prototype/dist/data/v08/llm-usage.json prototype/dist/data/v08/llm-usage/
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Record model connection check and budget usage'
+          git pull --rebase
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: model-connection-check
+          path: |
+            prototype/dist/data/v09/model-check.json
+            prototype/dist/data/v08/llm-usage.json
+          retention-days: 14

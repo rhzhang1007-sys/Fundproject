@@ -12,6 +12,7 @@ import re
 import unicodedata
 from urllib.parse import urlencode, urljoin
 from zoneinfo import ZoneInfo
+from refresh_public_data import SourceRefused
 
 GENERIC={'太阳能','新能源','新能源汽车','机器人','人工智能','半导体','有色金属','传媒','科技','银行','金融','中国','ETF','CPO'}
 TOPICS=[('earnings','业绩',r'业绩|净利润|营业收入|财报|年报|季报|中期报告'),('orders','订单与经营',r'订单|中标|签订|合同|产能|投产|经营'),('policy','政策与监管',r'政策|监管|证监会|央行|意见|办法|处罚|警示函'),('capital','资本事项',r'回购|增持|减持|分红|融资|定增|重组|收购|合并|清算|终止上市'),('product','基金产品',r'基金经理|费率|托管|申购|赎回|基金合同|产品资料|招募说明书'),('research','研究观点',r'研报|研究报告|评级|分析师|机构观点'),('market','市场交易',r'涨停|跌停|成交|大宗交易|资金流|停牌|复牌')]
@@ -149,7 +150,7 @@ def collect_fast(fetch,index,start,end,max_pages=80,page_size=100):
 
 
 def fund_page(payload,index):
-    if payload.get('ErrCode') not in (0,None) or not isinstance(payload.get('Data'),list):raise ValueError('Fund announcement schema/business error')
+    if payload.get('ErrCode') not in (0,None) or not isinstance(payload.get('Data'),list):raise ValueError('Fund announcement schema/business error: '+str(payload.get('ErrCode'))+' '+str(payload.get('ErrMsg') or '')[:100])
     events=[];dates=[]
     for x in payload['Data']:
         code=str(x.get('FUNDCODE') or '');date=str(x.get('PUBLISHDATEDesc') or x.get('PUBLISHDATE') or '')[:10]
@@ -164,13 +165,42 @@ def fund_page(payload,index):
 def collect_fund_announcements(fetch,index,start,end,max_pages=100):
     rows=[];seen=set();scanned=0
     for page in range(1,max_pages+1):
-        data=json.loads(fetch('https://api.fund.eastmoney.com/f10/JJGG?'+urlencode(dict(fundcode='',pageIndex=page,pageSize=100,type=0))))
-        events,dates=fund_page(data,index);scanned+=len(data['Data'])
+        try:
+            data=json.loads(fetch('https://api.fund.eastmoney.com/f10/JJGG?'+urlencode(dict(fundcode='',pageIndex=page,pageSize=100,type=0))))
+            events,dates=fund_page(data,index)
+        except SourceRefused:raise
+        except (ValueError,RuntimeError,OSError) as exc:
+            fallback,check=collect_cninfo_funds(fetch,index,start,end,min(max_pages,100))
+            return rows+fallback,dict(status='partial-source-fallback',primaryError=str(exc),primaryScanned=scanned,fallback=check,scope='CNINFO fund-disclosure column; not all domestic fund announcements')
+        scanned+=len(data['Data'])
         signature=tuple(x.get('ID') for x in data['Data'])
         if signature and signature in seen:raise ValueError('Fund announcement pagination repeated')
         seen.add(signature);rows.extend(e for e in events if start<=e['date']<=end)
         if not dates or (dates==sorted(dates,reverse=True) and max(dates)<start):return rows,dict(status='date-boundary',pages=page,scanned=scanned)
     return rows,dict(status='partial-page-limit',pages=max_pages,scanned=scanned)
+
+
+def collect_cninfo_funds(fetch,index,start,end,max_pages=100):
+    rows=[];seen=set();scanned=0
+    for page in range(1,max_pages+1):
+        data=json.loads(fetch('https://www.cninfo.com.cn/new/hisAnnouncement/query',dict(pageNum=page,pageSize=30,column='fund',plate='',tabName='fulltext',seDate=start+'~'+end,searchkey='',isHLtitle='true')))
+        items=data.get('announcements');total=data.get('totalAnnouncement')
+        if items is None and total==0:items=[]
+        if not isinstance(items,list) or type(total) is not int:raise ValueError('CNINFO fund disclosure schema changed')
+        signature=tuple((x.get('announcementId'),x.get('secCode')) for x in items)
+        if signature and signature in seen:raise ValueError('CNINFO fund pagination repeated')
+        seen.add(signature);scanned+=len(items)
+        for x in items:
+            code=str(x.get('secCode') or '')
+            if not re.fullmatch(r'\d{6}',code):continue
+            at=datetime.fromtimestamp(x['announcementTime']/1000,ZoneInfo('Asia/Shanghai')).isoformat()
+            if not start<=at[:10]<=end:continue
+            e=_event('cninfo-fund:'+str(x['announcementId']),x['announcementTitle'],'',at,urljoin('https://static.cninfo.com.cn/',x['adjunctUrl']),'巨潮基金披露','公告',index,[('fund',code)])
+            if e:rows.append(e)
+        if not data.get('hasMore'):
+            if scanned!=total:raise ValueError('CNINFO fund source total mismatch')
+            return rows,dict(status='source-exhausted',pages=page,scanned=scanned,reportedTotal=total)
+    return rows,dict(status='partial-page-limit',pages=max_pages,scanned=scanned,reportedTotal=total)
 
 
 def company_page(data,index,plate,start,end):

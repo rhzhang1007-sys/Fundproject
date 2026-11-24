@@ -31,9 +31,10 @@ def preflight(root,config):
     required=['prototype/dist/index.html','prototype/dist/data/v07/funds-l1.json','prototype/dist/data/v09/security-identities.json']
     missing=[name for name in required if not (root/name).is_file()]
     prices=u._price()
+    price_info=u.pricing_details()
     return dict(sourceFilesReady=not missing,missingFiles=missing,collectionEnabled=config.get('enabled') is True,
         publishEnabled=config.get('publishEnabled') is True,modelConfigured=bool(u.llm_config()[0]),
-        modelPricesConfigured=all(x is not None for x in prices),budgetCNY=u._budget(),
+        modelPricesConfigured=all(x is not None for x in prices),modelPricingSource=price_info['source'],budgetCNY=u._budget(),
         cronUTC='30 0 * * *',timezone='Asia/Shanghai',credentialsIncluded=False)
 
 
@@ -75,12 +76,12 @@ def run(root,config,collect=False,as_of=None,fetch=None):
         u.write_json(dest/'v07/events.json',previous);status['newsReady']=True
         progress('news-saved',activeEvents=len(previous['events']))
     if config.get('marketDaily',{}).get('enabled') and not fatal:
-        market=config['marketDaily'];snapshot=u.load(dest/'v09/market-daily.json',{'boards':[],'valuations':[]})
+        market=config['marketDaily'];snapshot=u.load(dest/'v09/market-daily.json',{'boards':[],'valuations':[]});fresh_boards=[]
         try:
             boards=collect_boards(fetch,end,int(market.get('maxBoardPages',30)))
             # Never replace an older valid daily snapshot with a future-dated empty set.
             if boards['boards']:
-                snapshot.update(boards);status['marketReady']=True
+                snapshot.update(boards);fresh_boards=boards['boards'];status['marketReady']=True
             status['sources']['board-flows']=boards['sourceChecks']
         except u.SourceRefused as exc:
             status['errors'].append(dict(task='board-flows',reason=str(exc)));fatal=True
@@ -95,6 +96,12 @@ def run(root,config,collect=False,as_of=None,fetch=None):
             except (ValueError,RuntimeError,TimeoutError,OSError,ImportError) as exc:status['errors'].append(dict(task='index-valuations',reason=str(exc)))
         if status['marketReady']:
             snapshot.update(updatedAt=now,targetDay=end);u.write_json(dest/'v09/market-daily.json',snapshot)
+            # Archive by the source's actual trading date, never the job's calendar date.
+            # Browser startup still loads only the current snapshot.
+            by_day={}
+            for row in fresh_boards:by_day.setdefault(row['asOf'],[]).append(row)
+            for source_day,rows in by_day.items():
+                u.write_json(dest/'v09/market-history'/f'{source_day}.json',dict(asOf=source_day,boards=rows,sourceChecks=snapshot.get('sourceChecks',{}),archivedAt=now))
         progress('market',ready=status['marketReady'])
     # The existing 119 forum targets are a separate scope. Source-first news covers the whole
     # identity registry, while complete all-market forum crawling would require a separate budget.

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "currency": "CNY",
+  "unit": "per-million-tokens",
+  "sourceUrl": "https://doc.zhizengzeng.com/doc-3979947",
+  "verifiedAt": "2026-11-24",
+  "reviewAfter": "2026-12-24",
+  "basis": "published-list-price-before-discount; budget-reference-not-invoice",
+  "entries": [
+    {"host": "api.zhizengzeng.com", "model": "glm-5.3-flashx", "input": 2, "output": 7},
+    {"host": "api.zhizengzeng.com", "model": "glm-5.3-flash", "input": 0.8, "output": 2.8}
+  ]
+}
