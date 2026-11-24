@@ -1,14 +1,9 @@
 {
-  "requestId": "2026-11-24-minimal-standard-endpoint-5",
-  "checkedAt": "2026-11-24T20:24:52+08:00",
-  "ok": false,
-  "reason": "model-http-502",
-  "error": {
-    "status": 502,
-    "category": "upstream-request-rejected",
-    "summary": "request failed",
-    "contentType": "application/json; charset=utf-8"
-  },
+  "requestId": "2026-11-24-production-flash-6",
+  "checkedAt": "2026-11-24T20:40:45+08:00",
+  "ok": true,
+  "reason": "validated-json-response",
+  "error": null,
   "directory": {
     "httpStatus": 200,
     "validSchema": true,
@@ -18,15 +13,9 @@
       "glm-5.3-flash"
     ]
   },
-  "comparison": {
-    "model": "glm-5.3-flash",
-    "ok": true,
-    "error": null,
-    "latencySeconds": 3.75,
-    "budgetBasis": "same conservative 2/7 reference; not an invoice"
-  },
-  "latencySeconds": 6.85,
-  "pricingSource": "configured-variables",
+  "comparison": null,
+  "latencySeconds": 5.77,
+  "pricingSource": "verified-provider-reference",
   "expectedModel": true,
   "expectedProvider": true,
   "scope": "interface-check-only; no business material; semantic quality not assessed"

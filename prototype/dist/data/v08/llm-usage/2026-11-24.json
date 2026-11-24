@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "date": "2026-11-24",
-  "calls": 5,
-  "promptTokens": 35,
-  "completionTokens": 44,
-  "costCNY": 0.000378,
+  "calls": 6,
+  "promptTokens": 70,
+  "completionTokens": 94,
+  "costCNY": 0.000546,
   "reservedCNY": 0.157144,
   "unknownUsageCalls": 4,
   "stoppedByBudget": false,
@@ -66,16 +66,18 @@
   ],
   "budgetCNY": 5.0,
   "priceCNYPerMillion": {
-    "in": 2.0,
-    "out": 7.0
+    "in": 0.8,
+    "out": 2.8
   },
   "aggregatedObjects": [],
   "aggregated": 0,
   "pricing": {
-    "input": 2.0,
-    "output": 7.0,
-    "source": "configured-variables",
-    "basis": "configured-budget-reference"
+    "input": 0.8,
+    "output": 2.8,
+    "source": "verified-provider-reference",
+    "sourceUrl": "https://doc.zhizengzeng.com/doc-3979947",
+    "verifiedAt": "2026-11-24",
+    "basis": "published-list-price-before-discount; budget-reference-not-invoice"
   },
   "costIsEstimate": true
 }
