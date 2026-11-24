@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 2,
+  "date": "2026-11-24",
+  "calls": 0,
+  "promptTokens": 0,
+  "completionTokens": 0,
+  "costCNY": 0.0,
+  "reservedCNY": 0.0,
+  "unknownUsageCalls": 0,
+  "stoppedByBudget": false,
+  "skipped": [
+    {
+      "objectId": "fund516160",
+      "date": "2026-11-23",
+      "posts": 4,
+      "reason": "too-few-posts"
+    },
+    {
+      "objectId": "fund515700",
+      "date": "2026-11-23",
+      "posts": 1,
+      "reason": "too-few-posts"
+    },
+    {
+      "objectId": "stock000958",
+      "date": "2026-11-23",
+      "posts": 11,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock001248",
+      "date": "2026-11-23",
+      "posts": 94,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock001257",
+      "date": "2026-11-23",
+      "posts": 16,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock001289",
+      "date": "2026-11-23",
+      "posts": 10,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock001365",
+      "date": "2026-11-23",
+      "posts": 8,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock001393",
+      "date": "2026-11-23",
+      "posts": 7,
+      "reason": "missing-price"
+    },
+    {
+      "objectId": "stock002050",
+      "date": "2026-11-23",
+      "posts": 297,
+      "reason": "missing-price"
+    }
+  ],
+  "budgetCNY": 5.0,
+  "priceCNYPerMillion": {
+    "in": null,
+    "out": null
+  },
+  "aggregatedObjects": [],
+  "aggregated": 0,
+  "lastSkip": "missing-price"
+}

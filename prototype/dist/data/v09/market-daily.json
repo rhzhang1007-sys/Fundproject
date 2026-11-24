@@ -2806,265 +2806,44 @@
     {
       "indexCode": "399808",
       "indexName": "中证新能源指数",
-      "asOf": "2026-11-23",
-      "peTotalShares": 19.53,
-      "peCalculationShares": 20.52,
-      "dividendYieldTotalSharesPercent": 1.97,
-      "dividendYieldCalculationSharesPercent": 1.53,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-20",
-      "peTotalShares": 19.45,
-      "peCalculationShares": 20.29,
-      "dividendYieldTotalSharesPercent": 1.98,
-      "dividendYieldCalculationSharesPercent": 1.54,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-19",
-      "peTotalShares": 19.92,
-      "peCalculationShares": 20.9,
-      "dividendYieldTotalSharesPercent": 1.93,
-      "dividendYieldCalculationSharesPercent": 1.5,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-18",
-      "peTotalShares": 20.25,
-      "peCalculationShares": 21.23,
-      "dividendYieldTotalSharesPercent": 1.9,
-      "dividendYieldCalculationSharesPercent": 1.48,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-17",
-      "peTotalShares": 20.21,
-      "peCalculationShares": 21.26,
-      "dividendYieldTotalSharesPercent": 1.9,
-      "dividendYieldCalculationSharesPercent": 1.47,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-16",
-      "peTotalShares": 20.35,
-      "peCalculationShares": 21.39,
-      "dividendYieldTotalSharesPercent": 1.89,
-      "dividendYieldCalculationSharesPercent": 1.46,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-13",
-      "peTotalShares": 20.49,
-      "peCalculationShares": 21.71,
-      "dividendYieldTotalSharesPercent": 1.87,
-      "dividendYieldCalculationSharesPercent": 1.43,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-12",
-      "peTotalShares": 20.81,
-      "peCalculationShares": 22.15,
-      "dividendYieldTotalSharesPercent": 1.84,
-      "dividendYieldCalculationSharesPercent": 1.4,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-11",
-      "peTotalShares": 21.19,
-      "peCalculationShares": 22.59,
-      "dividendYieldTotalSharesPercent": 1.8,
-      "dividendYieldCalculationSharesPercent": 1.38,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-10",
-      "peTotalShares": 21.35,
-      "peCalculationShares": 22.71,
-      "dividendYieldTotalSharesPercent": 1.79,
-      "dividendYieldCalculationSharesPercent": 1.37,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-09",
-      "peTotalShares": 21.31,
-      "peCalculationShares": 22.64,
-      "dividendYieldTotalSharesPercent": 1.79,
-      "dividendYieldCalculationSharesPercent": 1.37,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-06",
-      "peTotalShares": 21.67,
-      "peCalculationShares": 23.06,
-      "dividendYieldTotalSharesPercent": 1.76,
-      "dividendYieldCalculationSharesPercent": 1.35,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-05",
-      "peTotalShares": 22.17,
-      "peCalculationShares": 23.58,
-      "dividendYieldTotalSharesPercent": 1.72,
-      "dividendYieldCalculationSharesPercent": 1.32,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-04",
-      "peTotalShares": 21.37,
-      "peCalculationShares": 22.63,
-      "dividendYieldTotalSharesPercent": 1.79,
-      "dividendYieldCalculationSharesPercent": 1.38,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-03",
-      "peTotalShares": 20.77,
-      "peCalculationShares": 21.82,
-      "dividendYieldTotalSharesPercent": 1.84,
-      "dividendYieldCalculationSharesPercent": 1.43,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
-    },
-    {
-      "indexCode": "399808",
-      "indexName": "中证新能源指数",
-      "asOf": "2026-11-02",
-      "peTotalShares": 20.39,
+      "asOf": "2026-10-27",
+      "peTotalShares": 20.24,
       "peCalculationShares": 21.47,
-      "dividendYieldTotalSharesPercent": 1.87,
+      "dividendYieldTotalSharesPercent": 1.82,
+      "dividendYieldCalculationSharesPercent": 1.43,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-10-28",
+      "peTotalShares": 20.28,
+      "peCalculationShares": 21.62,
+      "dividendYieldTotalSharesPercent": 1.82,
+      "dividendYieldCalculationSharesPercent": 1.42,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-10-29",
+      "peTotalShares": 20.11,
+      "peCalculationShares": 21.27,
+      "dividendYieldTotalSharesPercent": 1.84,
       "dividendYieldCalculationSharesPercent": 1.45,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3095,10 +2874,10 @@
     {
       "indexCode": "399808",
       "indexName": "中证新能源指数",
-      "asOf": "2026-10-29",
-      "peTotalShares": 20.11,
-      "peCalculationShares": 21.27,
-      "dividendYieldTotalSharesPercent": 1.84,
+      "asOf": "2026-11-02",
+      "peTotalShares": 20.39,
+      "peCalculationShares": 21.47,
+      "dividendYieldTotalSharesPercent": 1.87,
       "dividendYieldCalculationSharesPercent": 1.45,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3112,11 +2891,11 @@
     {
       "indexCode": "399808",
       "indexName": "中证新能源指数",
-      "asOf": "2026-10-28",
-      "peTotalShares": 20.28,
-      "peCalculationShares": 21.62,
-      "dividendYieldTotalSharesPercent": 1.82,
-      "dividendYieldCalculationSharesPercent": 1.42,
+      "asOf": "2026-11-03",
+      "peTotalShares": 20.77,
+      "peCalculationShares": 21.82,
+      "dividendYieldTotalSharesPercent": 1.84,
+      "dividendYieldCalculationSharesPercent": 1.43,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3129,11 +2908,232 @@
     {
       "indexCode": "399808",
       "indexName": "中证新能源指数",
-      "asOf": "2026-10-27",
-      "peTotalShares": 20.24,
-      "peCalculationShares": 21.47,
-      "dividendYieldTotalSharesPercent": 1.82,
+      "asOf": "2026-11-04",
+      "peTotalShares": 21.37,
+      "peCalculationShares": 22.63,
+      "dividendYieldTotalSharesPercent": 1.79,
+      "dividendYieldCalculationSharesPercent": 1.38,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-05",
+      "peTotalShares": 22.17,
+      "peCalculationShares": 23.58,
+      "dividendYieldTotalSharesPercent": 1.72,
+      "dividendYieldCalculationSharesPercent": 1.32,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-06",
+      "peTotalShares": 21.67,
+      "peCalculationShares": 23.06,
+      "dividendYieldTotalSharesPercent": 1.76,
+      "dividendYieldCalculationSharesPercent": 1.35,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-09",
+      "peTotalShares": 21.31,
+      "peCalculationShares": 22.64,
+      "dividendYieldTotalSharesPercent": 1.79,
+      "dividendYieldCalculationSharesPercent": 1.37,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-10",
+      "peTotalShares": 21.35,
+      "peCalculationShares": 22.71,
+      "dividendYieldTotalSharesPercent": 1.79,
+      "dividendYieldCalculationSharesPercent": 1.37,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-11",
+      "peTotalShares": 21.19,
+      "peCalculationShares": 22.59,
+      "dividendYieldTotalSharesPercent": 1.8,
+      "dividendYieldCalculationSharesPercent": 1.38,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-12",
+      "peTotalShares": 20.81,
+      "peCalculationShares": 22.15,
+      "dividendYieldTotalSharesPercent": 1.84,
+      "dividendYieldCalculationSharesPercent": 1.4,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-13",
+      "peTotalShares": 20.49,
+      "peCalculationShares": 21.71,
+      "dividendYieldTotalSharesPercent": 1.87,
       "dividendYieldCalculationSharesPercent": 1.43,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-16",
+      "peTotalShares": 20.35,
+      "peCalculationShares": 21.39,
+      "dividendYieldTotalSharesPercent": 1.89,
+      "dividendYieldCalculationSharesPercent": 1.46,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-17",
+      "peTotalShares": 20.21,
+      "peCalculationShares": 21.26,
+      "dividendYieldTotalSharesPercent": 1.9,
+      "dividendYieldCalculationSharesPercent": 1.47,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-18",
+      "peTotalShares": 20.25,
+      "peCalculationShares": 21.23,
+      "dividendYieldTotalSharesPercent": 1.9,
+      "dividendYieldCalculationSharesPercent": 1.48,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-19",
+      "peTotalShares": 19.92,
+      "peCalculationShares": 20.9,
+      "dividendYieldTotalSharesPercent": 1.93,
+      "dividendYieldCalculationSharesPercent": 1.5,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-20",
+      "peTotalShares": 19.45,
+      "peCalculationShares": 20.29,
+      "dividendYieldTotalSharesPercent": 1.98,
+      "dividendYieldCalculationSharesPercent": 1.54,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/399808"
+    },
+    {
+      "indexCode": "399808",
+      "indexName": "中证新能源指数",
+      "asOf": "2026-11-23",
+      "peTotalShares": 19.53,
+      "peCalculationShares": 20.52,
+      "dividendYieldTotalSharesPercent": 1.97,
+      "dividendYieldCalculationSharesPercent": 1.53,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3146,129 +3146,95 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-23",
-      "peTotalShares": 20.33,
-      "peCalculationShares": 24.69,
-      "dividendYieldTotalSharesPercent": 1.88,
-      "dividendYieldCalculationSharesPercent": 1.22,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-20",
-      "peTotalShares": 20.08,
-      "peCalculationShares": 24.17,
-      "dividendYieldTotalSharesPercent": 1.9,
-      "dividendYieldCalculationSharesPercent": 1.25,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-19",
-      "peTotalShares": 20.7,
-      "peCalculationShares": 24.99,
-      "dividendYieldTotalSharesPercent": 1.84,
-      "dividendYieldCalculationSharesPercent": 1.21,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-18",
-      "peTotalShares": 20.99,
-      "peCalculationShares": 25.23,
-      "dividendYieldTotalSharesPercent": 1.82,
-      "dividendYieldCalculationSharesPercent": 1.2,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-17",
-      "peTotalShares": 20.98,
-      "peCalculationShares": 25.33,
-      "dividendYieldTotalSharesPercent": 1.82,
-      "dividendYieldCalculationSharesPercent": 1.19,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-16",
-      "peTotalShares": 21.1,
-      "peCalculationShares": 25.44,
-      "dividendYieldTotalSharesPercent": 1.81,
-      "dividendYieldCalculationSharesPercent": 1.19,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-13",
-      "peTotalShares": 21.2,
-      "peCalculationShares": 25.8,
-      "dividendYieldTotalSharesPercent": 1.8,
-      "dividendYieldCalculationSharesPercent": 1.17,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-12",
-      "peTotalShares": 21.49,
-      "peCalculationShares": 26.22,
+      "asOf": "2026-10-27",
+      "peTotalShares": 21.16,
+      "peCalculationShares": 25.88,
       "dividendYieldTotalSharesPercent": 1.77,
+      "dividendYieldCalculationSharesPercent": 1.12,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-10-28",
+      "peTotalShares": 21.29,
+      "peCalculationShares": 26.3,
+      "dividendYieldTotalSharesPercent": 1.76,
+      "dividendYieldCalculationSharesPercent": 1.1,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-10-29",
+      "peTotalShares": 20.96,
+      "peCalculationShares": 25.69,
+      "dividendYieldTotalSharesPercent": 1.79,
+      "dividendYieldCalculationSharesPercent": 1.13,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-10-30",
+      "peTotalShares": 20.91,
+      "peCalculationShares": 25.44,
+      "dividendYieldTotalSharesPercent": 1.82,
+      "dividendYieldCalculationSharesPercent": 1.18,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-02",
+      "peTotalShares": 21.38,
+      "peCalculationShares": 25.89,
+      "dividendYieldTotalSharesPercent": 1.78,
+      "dividendYieldCalculationSharesPercent": 1.16,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-03",
+      "peTotalShares": 21.79,
+      "peCalculationShares": 26.2,
+      "dividendYieldTotalSharesPercent": 1.75,
       "dividendYieldCalculationSharesPercent": 1.15,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3282,61 +3248,10 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-11",
-      "peTotalShares": 22.07,
-      "peCalculationShares": 26.94,
-      "dividendYieldTotalSharesPercent": 1.73,
-      "dividendYieldCalculationSharesPercent": 1.12,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-10",
-      "peTotalShares": 22.22,
-      "peCalculationShares": 26.99,
+      "asOf": "2026-11-04",
+      "peTotalShares": 22.33,
+      "peCalculationShares": 27.04,
       "dividendYieldTotalSharesPercent": 1.71,
-      "dividendYieldCalculationSharesPercent": 1.12,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-09",
-      "peTotalShares": 22.15,
-      "peCalculationShares": 26.91,
-      "dividendYieldTotalSharesPercent": 1.72,
-      "dividendYieldCalculationSharesPercent": 1.12,
-      "metricLabels": {
-        "peTotalShares": "市盈率1（总股本）P/E1",
-        "peCalculationShares": "市盈率2（计算用股本）P/E2"
-      },
-      "pb": null,
-      "percentiles": null,
-      "percentileStatus": "history-window-and-method-not-approved",
-      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
-    },
-    {
-      "indexCode": "930997",
-      "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-06",
-      "peTotalShares": 22.48,
-      "peCalculationShares": 27.26,
-      "dividendYieldTotalSharesPercent": 1.69,
       "dividendYieldCalculationSharesPercent": 1.11,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3367,10 +3282,10 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-04",
-      "peTotalShares": 22.33,
-      "peCalculationShares": 27.04,
-      "dividendYieldTotalSharesPercent": 1.71,
+      "asOf": "2026-11-06",
+      "peTotalShares": 22.48,
+      "peCalculationShares": 27.26,
+      "dividendYieldTotalSharesPercent": 1.69,
       "dividendYieldCalculationSharesPercent": 1.11,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3384,10 +3299,61 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-03",
-      "peTotalShares": 21.79,
-      "peCalculationShares": 26.2,
-      "dividendYieldTotalSharesPercent": 1.75,
+      "asOf": "2026-11-09",
+      "peTotalShares": 22.15,
+      "peCalculationShares": 26.91,
+      "dividendYieldTotalSharesPercent": 1.72,
+      "dividendYieldCalculationSharesPercent": 1.12,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-10",
+      "peTotalShares": 22.22,
+      "peCalculationShares": 26.99,
+      "dividendYieldTotalSharesPercent": 1.71,
+      "dividendYieldCalculationSharesPercent": 1.12,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-11",
+      "peTotalShares": 22.07,
+      "peCalculationShares": 26.94,
+      "dividendYieldTotalSharesPercent": 1.73,
+      "dividendYieldCalculationSharesPercent": 1.12,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-12",
+      "peTotalShares": 21.49,
+      "peCalculationShares": 26.22,
+      "dividendYieldTotalSharesPercent": 1.77,
       "dividendYieldCalculationSharesPercent": 1.15,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
@@ -3401,11 +3367,11 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-11-02",
-      "peTotalShares": 21.38,
-      "peCalculationShares": 25.89,
-      "dividendYieldTotalSharesPercent": 1.78,
-      "dividendYieldCalculationSharesPercent": 1.16,
+      "asOf": "2026-11-13",
+      "peTotalShares": 21.2,
+      "peCalculationShares": 25.8,
+      "dividendYieldTotalSharesPercent": 1.8,
+      "dividendYieldCalculationSharesPercent": 1.17,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3418,11 +3384,28 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-10-30",
-      "peTotalShares": 20.91,
+      "asOf": "2026-11-16",
+      "peTotalShares": 21.1,
       "peCalculationShares": 25.44,
+      "dividendYieldTotalSharesPercent": 1.81,
+      "dividendYieldCalculationSharesPercent": 1.19,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-17",
+      "peTotalShares": 20.98,
+      "peCalculationShares": 25.33,
       "dividendYieldTotalSharesPercent": 1.82,
-      "dividendYieldCalculationSharesPercent": 1.18,
+      "dividendYieldCalculationSharesPercent": 1.19,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3435,11 +3418,11 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-10-29",
-      "peTotalShares": 20.96,
-      "peCalculationShares": 25.69,
-      "dividendYieldTotalSharesPercent": 1.79,
-      "dividendYieldCalculationSharesPercent": 1.13,
+      "asOf": "2026-11-18",
+      "peTotalShares": 20.99,
+      "peCalculationShares": 25.23,
+      "dividendYieldTotalSharesPercent": 1.82,
+      "dividendYieldCalculationSharesPercent": 1.2,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3452,11 +3435,11 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-10-28",
-      "peTotalShares": 21.29,
-      "peCalculationShares": 26.3,
-      "dividendYieldTotalSharesPercent": 1.76,
-      "dividendYieldCalculationSharesPercent": 1.1,
+      "asOf": "2026-11-19",
+      "peTotalShares": 20.7,
+      "peCalculationShares": 24.99,
+      "dividendYieldTotalSharesPercent": 1.84,
+      "dividendYieldCalculationSharesPercent": 1.21,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3469,11 +3452,28 @@
     {
       "indexCode": "930997",
       "indexName": "中证新能源汽车产业指数",
-      "asOf": "2026-10-27",
-      "peTotalShares": 21.16,
-      "peCalculationShares": 25.88,
-      "dividendYieldTotalSharesPercent": 1.77,
-      "dividendYieldCalculationSharesPercent": 1.12,
+      "asOf": "2026-11-20",
+      "peTotalShares": 20.08,
+      "peCalculationShares": 24.17,
+      "dividendYieldTotalSharesPercent": 1.9,
+      "dividendYieldCalculationSharesPercent": 1.25,
+      "metricLabels": {
+        "peTotalShares": "市盈率1（总股本）P/E1",
+        "peCalculationShares": "市盈率2（计算用股本）P/E2"
+      },
+      "pb": null,
+      "percentiles": null,
+      "percentileStatus": "history-window-and-method-not-approved",
+      "sourceUrl": "https://www.csindex.com.cn/zh-CN/indices/index-detail/930997"
+    },
+    {
+      "indexCode": "930997",
+      "indexName": "中证新能源汽车产业指数",
+      "asOf": "2026-11-23",
+      "peTotalShares": 20.33,
+      "peCalculationShares": 24.69,
+      "dividendYieldTotalSharesPercent": 1.88,
+      "dividendYieldCalculationSharesPercent": 1.22,
       "metricLabels": {
         "peTotalShares": "市盈率1（总股本）P/E1",
         "peCalculationShares": "市盈率2（计算用股本）P/E2"
@@ -3500,6 +3500,7 @@
       "followup": "HTTP 502 on remaining page; retained exact sample dates"
     }
   },
-  "updatedAt": "2026-11-24",
-  "coverage": "first-page-samples-only"
+  "updatedAt": "2026-11-24T18:33:52+08:00",
+  "coverage": "first-page-samples-only",
+  "targetDay": "2026-11-23"
 }

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "attemptedAt": "2026-11-24T18:33:52+08:00",
+  "targetDay": "2026-11-23",
+  "newsReady": true,
+  "marketReady": true,
+  "forumReady": false,
+  "sources": {
+    "fast-news": {
+      "coverage": {
+        "status": "date-boundary",
+        "pages": 18,
+        "scanned": 1800
+      },
+      "start": "2026-11-22",
+      "end": "2026-11-23",
+      "eventRows": 439
+    },
+    "company-announcements": {
+      "coverage": {
+        "sz": {
+          "status": "source-exhausted",
+          "pages": 13,
+          "scanned": 373,
+          "reportedTotal": 373
+        },
+        "sh": {
+          "status": "source-exhausted",
+          "pages": 3,
+          "scanned": 68,
+          "reportedTotal": 68
+        },
+        "bj": {
+          "status": "source-exhausted",
+          "pages": 3,
+          "scanned": 74,
+          "reportedTotal": 74
+        }
+      },
+      "start": "2026-11-22",
+      "end": "2026-11-23",
+      "eventRows": 515
+    },
+    "index-valuations": {
+      "rows": 40,
+      "percentiles": "not-calculated; historical-window-pending"
+    }
+  },
+  "errors": [
+    {
+      "task": "fund-announcements",
+      "reason": "Fund announcement schema/business error"
+    },
+    {
+      "task": "board-flows",
+      "reason": "Public source unavailable: HTTP 502"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock000009",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock000155",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock000537",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock000591",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock000875",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock001237",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock001301",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock001399",
+      "reason": "Forum page safety limit reached; daily coverage unproven"
+    },
+    {
+      "task": "forum",
+      "objectId": "stock002056",
+      "reason": "Daily collection deadline reached"
+    }
+  ],
+  "model": {
+    "sourceFilesReady": true,
+    "missingFiles": [],
+    "collectionEnabled": true,
+    "publishEnabled": false,
+    "modelConfigured": true,
+    "modelPricesConfigured": false,
+    "budgetCNY": 5.0,
+    "cronUTC": "30 0 * * *",
+    "timezone": "Asia/Shanghai",
+    "credentialsIncluded": false
+  },
+  "forumScope": {
+    "targets": 119,
+    "successful": 9,
+    "allMarket": false
+  },
+  "incompleteSources": [],
+  "status": "partial",
+  "networkRequests": 2244
+}
