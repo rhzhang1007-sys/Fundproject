@@ -87,6 +87,8 @@ class EntityIndex:
 
 def runtime_entities(root):
     root=Path(root)
+    global_registry=root/'prototype/dist/data/v10/entity-aliases.json'
+    if global_registry.exists():return json.loads(global_registry.read_text())['entities']
     stocks=json.loads((root/'prototype/dist/data/v09/security-identities.json').read_text())['stocks']
     funds=json.loads((root/'prototype/dist/data/v07/funds-l1.json').read_text())
     return [dict(**s,kind='stock') for s in stocks]+[dict(kind='fund',code=c,name=n,matchKeywords=[n]) for c,n,_ in funds]
@@ -102,7 +104,7 @@ def _event(id,title,text,published,url,source,kind,index,explicit=()):
     context_topics=topics(title)
     if not tags and any(t['id'] in ('policy','market') for t in context_topics):
         tags=[dict(kind='market',code='CN-MARKET',name='市场环境',basis='market-context-only')]
-    if not tags:return None
+    if not tags:tags=[dict(kind='unassigned',code='CN-UNASSIGNED',name='待归属资讯',basis='source-read-entity-unresolved')]
     first=tags[0]
     return dict(id=id,sourceRecordId=id,entityCode=first['code'],entityName=first['name'],entityCodes=sorted({t['code'] for t in tags}),entities=tags,
         title=title,summary=text,date=published[:10],publishedAt=published,url=url,source=source,kind=kind,
@@ -125,11 +127,14 @@ def fast_page(payload,index):
                 stock=index.entities.get(('stock',code))
                 exchange={'0':'SZSE','1':'SSE','2':'BSE'}[market]
                 if stock and stock.get('exchange')==exchange:explicit.append(('stock',code))
-                elif len(keys)==1 and keys[0][0]=='fund':explicit.append(keys[0])
+                # This mixed security list also contains indices. A number matching
+                # only a fund directory entry does not prove that fund is the issuer.
         code=str(x.get('code') or '')
         if not code.isdigit():raise ValueError('Missing article identity')
         e=_event('fast:'+code,x.get('title'),x.get('summary'),at,f'https://finance.eastmoney.com/a/{code}.html','东方财富快讯','资讯',index,explicit)
-        if e:events.append(e)
+        if e:
+            e['sourceSecurityRefs']=[raw for raw in x.get('stockList') or [] if isinstance(raw,str) and re.fullmatch(r'\d{1,3}\.[A-Z0-9]{1,16}',raw)]
+            events.append(e)
     return events,dates,str(data.get('sortEnd') or '')
 
 

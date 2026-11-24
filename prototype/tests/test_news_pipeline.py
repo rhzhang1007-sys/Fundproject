@@ -23,7 +23,11 @@ class NewsPipeline(unittest.TestCase):
         payload=dict(code='1',data=dict(fastNewsList=[dict(code='2026112412345',title='新闻',summary='事项',showTime='2026-11-24 10:00:00',stockList=['0.000001','116.00001','90.BK0001'])],sortEnd='10'))
         es,dates,_=n.fast_page(payload,self.index());self.assertEqual(es[0]['entities'][0]['code'],'000001');self.assertEqual(dates,['2026-11-24'])
         payload['data']['fastNewsList'][0]['stockList']=['1.000001']
-        self.assertFalse(n.fast_page(payload,self.index())[0]) # Shanghai index is not Shenzhen stock 000001.
+        unassigned=n.fast_page(payload,self.index())[0];self.assertEqual(unassigned[0]['sourceSecurityRefs'],['1.000001']);self.assertEqual(unassigned[0]['entities'][0]['kind'],'unassigned');self.assertFalse(any(t.get('kind')=='stock' for e in unassigned for t in e['entities'])) # Keep unresolved source material without tagging Shanghai index as Shenzhen stock.
+    def test_index_number_matching_only_fund_directory_does_not_tag_that_fund(self):
+        idx=n.EntityIndex([dict(kind='fund',code='000300',name='另一只场外基金')])
+        payload=dict(code='1',data=dict(fastNewsList=[dict(code='2026112412345',title='沪深300指数',summary='指数情况',showTime='2026-11-24 10:00:00',stockList=['1.000300'])],sortEnd='10'))
+        events,_,_=n.fast_page(payload,idx);self.assertFalse(any(t['kind']=='fund' for e in events for t in e['entities']));self.assertEqual(events[0]['sourceSecurityRefs'],['1.000300'])
     def test_business_errors_never_count_as_zero_news(self):
         with self.assertRaises(ValueError):n.fast_page({'code':0,'data':None},self.index())
     def test_cursor_is_forwarded_and_date_window_excludes_future(self):

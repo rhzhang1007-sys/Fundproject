@@ -44,11 +44,12 @@ def merge_events(previous, incoming, as_of, days=30):
         date = datetime.strptime(e['date'], '%Y-%m-%d').date()
         if date > as_of:
             raise ValueError('Future publication date')
-        clean = {k: e.get(k) for k in ('id', 'entityCode', 'entityName', 'title', 'summary', 'date', 'source', 'url', 'kind', 'entityCodes', 'entities', 'summaryBasis', 'sourceRecordId', 'publishedAt', 'topics', 'entityHints', 'contentCoverage', 'originPublishedAt', 'publicationTimeBasis', 'eventOccurredAt')}
+        clean = {k: e.get(k) for k in ('id', 'entityCode', 'entityName', 'title', 'summary', 'date', 'source', 'url', 'kind', 'entityCodes', 'entities', 'summaryBasis', 'sourceRecordId', 'publishedAt', 'topics', 'entityHints', 'contentCoverage', 'originPublishedAt', 'publicationTimeBasis', 'eventOccurredAt', 'sourceSecurityRefs')}
         clean['url'] = canonical_url(e['url'])
         # Group exact title duplicates within the same entity and publication day only.
         # Similar words alone never establish that two articles are the same event.
-        key = (e['entityCode'], e['date'], re.sub(r'\s+', '', e['title']))
+        role=next((t.get('kind') for t in e.get('entities',[]) if t.get('code')==e['entityCode']),None)
+        key = (role,e['entityCode'], e['date'], re.sub(r'\s+', '', e['title']))
         url_key=(clean['url'],e['date'])
         record_key=(e.get('sourceRecordId'),e['date']) if e.get('sourceRecordId') else None
         key=record_keys.get(record_key,url_keys.get(url_key,key))
@@ -209,6 +210,17 @@ class _Body(HTMLParser):
 def detail_record(page, expected_comments=None, max_chars=50000):
     parser=_Body(); parser.feed(page)
     content=re.sub(r'\s+', ' ', ''.join(parser.parts)).strip()
+    body_basis='html-body'
+    if not parser.found:
+        # Current public React pages embed the original post as JSON, not zwconbody.
+        embedded=re.search(r'(?:var|let|const)\s+post_article\s*=\s*',page)
+        if embedded:
+            try:
+                article,_=json.JSONDecoder().raw_decode(page[embedded.end():])
+                raw_content=article.get('post_content') if isinstance(article,dict) else None
+                if isinstance(raw_content,str) and raw_content:
+                    content=_text(raw_content);parser.found=True;body_basis='embedded-post-article'
+            except ValueError:pass
     comments=[]; payload=None
     match=re.search(r'(?:var|let|const)\s+reply_list\s*=\s*', page)
     if match:
@@ -227,7 +239,7 @@ def detail_record(page, expected_comments=None, max_chars=50000):
         coverage=dict(body='complete' if parser.found and len(content)<=max_chars else 'partial' if parser.found else 'missing',
                       comments='complete' if complete else 'partial' if comments else 'unknown',
                       fetchedComments=len(comments), reportedComments=expected_comments,
-                      commentSource='embedded-page', contentTruncated=len(content)>max_chars))
+                      commentSource='embedded-page',bodySource=body_basis, contentTruncated=len(content)>max_chars))
 
 
 def parse_detail(page, max_comments=0, max_chars=50000):
@@ -345,6 +357,7 @@ LLM_STATE={}
 LLM_USAGE_PATH=None
 LLM_DEADLINE=None
 MODEL_CIRCUIT_ERROR=None
+LLM_LIVE_BILLING=False
 
 
 def init_llm(path, day):
@@ -399,6 +412,10 @@ def parse_json_loose(text):
 
 def _post_llm(url, key, model, messages, max_tokens):
     global MODEL_CIRCUIT_ERROR
+    if LLM_LIVE_BILLING and LLM_USAGE_PATH:
+        billing_day=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
+        if LLM_STATE.get('date')!=billing_day:
+            persist_usage();init_llm(LLM_USAGE_PATH.parent/(billing_day+'.json'),billing_day)
     if MODEL_CIRCUIT_ERROR:
         LLM_STATE['lastSkip']='model-circuit-open';return None
     LLM_STATE.pop('lastSkip',None);LLM_STATE.pop('lastError',None)
@@ -575,39 +592,12 @@ def cluster_forum(name,day,rows,cache=None,min_posts=5,max_claims=5):
     return accepted,'ok'
 
 
-def enrich_summaries(events,limit=60):
-    # A title alone is not announcement content. Keep it verbatim rather than invent a summary.
-    # This slot can accept validated full-text anchors later, through the same budgeted llm_json.
-    return 0
-
-
 class Fetcher:
+    # Compatibility entry point; all actual public reads use the same paced transport.
     def __init__(self,interval):
-        self.interval=max(1.0,float(interval)); self.previous=0; self.lock=threading.Lock()
-        self.refused=False
-    def __call__(self,url,params=None):
-        request=Request(url,data=urlencode(params).encode() if params else None,
-            headers={'User-Agent':'Mozilla/5.0 FundprojectPublicResearch/0.8',
-                     'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'})
-        last=None
-        for attempt in range(3):
-            with self.lock:
-                if self.refused: raise SourceRefused('Source refused access; stop run')
-                delay=self.interval-(time.monotonic()-self.previous)
-                if delay>0: time.sleep(delay)
-                self.previous=time.monotonic()
-            try:
-                with urlopen(request,timeout=25) as r:
-                    content=r.read(4_000_001)
-                    if len(content)>4_000_000: raise ValueError('Source response too large')
-                    return content.decode('utf-8-sig')
-            except HTTPError as exc:
-                if exc.code in (401,403,429):
-                    self.refused=True; raise SourceRefused(f'Source refused access ({exc.code}); stop run') from exc
-                last=exc
-            except (URLError,OSError) as exc: last=exc
-            if attempt<2: time.sleep(1.5*(attempt+1))
-        raise RuntimeError('Source unreachable after retries') from last
+        from public_transport import CurlPublicFetcher
+        self.transport=CurlPublicFetcher(interval)
+    def __call__(self,url,params=None):return self.transport(url,params)
 
 
 def announcements(fetch, obj, start, end, pages):
@@ -743,12 +733,19 @@ def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None,forum_ob
         for b in blocks:
             if b['claims']:aggregated.add(b['objectId'])
         LLM_STATE['aggregatedObjects']=sorted(aggregated);LLM_STATE['aggregated']=len(aggregated);persist_usage()
-    for month,rows in archives.items():
-        path=dist/'archive'/f'{month}.json';old=load(path,{'events':[]})['events']
-        _,grouped=merge_events(old+rows,[],day,0)
-        write_json(path,dict(schemaVersion=2,events=[x for group in grouped.values() for x in group]))
-    months=sorted(set([p.stem for p in (dist/'archive').glob('????-??.json')]+list(archives)))
-    write_json(dist/'archive/index.json',dict(schemaVersion=1,months=months))
+    if config.get('retentionMode')=='rolling-30-days':
+        # Only retired public news/forum archives. Never touch reports, market history or holdings.
+        for old_path in (dist/'archive').glob('*.json'):
+            if re.fullmatch(r'(?:forum-)?\d{4}-\d{2}\.json',old_path.name):old_path.unlink()
+        archives={}
+        write_json(dist/'archive/index.json',dict(schemaVersion=1,months=[]))
+    else:
+        for month,rows in archives.items():
+            path=dist/'archive'/f'{month}.json';old=load(path,{'events':[]})['events']
+            _,grouped=merge_events(old+rows,[],day,0)
+            write_json(path,dict(schemaVersion=2,events=[x for group in grouped.values() for x in group]))
+        months=sorted(set([p.stem for p in (dist/'archive').glob('????-??.json')]+list(archives)))
+        write_json(dist/'archive/index.json',dict(schemaVersion=1,months=months))
     event_checks={k:v for k,v in checks.items() if not k.endswith(':forum')}
     output={**previous,'events':active}
     if event_checks:
@@ -788,7 +785,7 @@ def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None,forum_ob
             date=r.get('date') or r.get('observedAt')
             if date>=start: recent.append(r)
             else: old_groups.setdefault(date[:7],[]).append(r)
-        for month,rows in old_groups.items():
+        for month,rows in ({} if config.get('retentionMode')=='rolling-30-days' else old_groups).items():
             path=dist/'archive'/('forum-'+month+'.json');old=load(path,{'records':[]})['records']
             write_json(path,dict(schemaVersion=2,records=list({(r['objectId'],r['url']):r for r in old+rows}.values())))
         claims={(b['objectId'],b['date']):b for b in forum.get('claims',[])}

@@ -3,5 +3,9 @@ __pycache__/
 *.pyc
 .env
 .env.*
+!**/.env.example
+**/.private/
+**/.public-corpus/
+**/.runtime/
 node_modules/
 tmp/

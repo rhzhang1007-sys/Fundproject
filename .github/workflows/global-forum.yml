@@ -1,0 +1,89 @@
+name: Continue global forum queue
+on:
+  schedule:
+    # Continue every 20 minutes; one shared writer prevents overlapping budgets/commits.
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['prototype/config/global-forum-bootstrap.json']
+permissions:
+  contents: read
+concurrency:
+  group: daily-public-data-collection
+  cancel-in-progress: false
+jobs:
+  continue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check global scope offline
+        run: python prototype/scripts/global_forum.py
+      - name: Read queue switch
+        id: gate
+        run: |
+          python - <<'PYTHON' >> "$GITHUB_OUTPUT"
+          import json
+          c=json.load(open('prototype/config/public-updates.json'))
+          print('enabled='+str(c.get('enabled') is True and c.get('forumDaily',{}).get('enabled') is True).lower())
+          PYTHON
+      - name: Restore private resumable corpus
+        id: corpus_restore
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/github_corpus_cache.py pull
+      - name: Resume public forum lists, text and model queue
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: glm-5.3-flash
+          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
+        run: python prototype/scripts/global_forum.py --collect
+      - name: Save and verify private corpus checkpoint
+        id: corpus_save
+        if: always() && steps.corpus_restore.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/github_corpus_cache.py push
+      - name: Persist checkpoints and cumulative budget
+        if: always() && steps.gate.outputs.enabled == 'true'
+        env:
+          CORPUS_SAVED: ${{ steps.corpus_save.outcome }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python - <<'PYTHON'
+          import os,subprocess
+          from pathlib import Path
+          paths=['prototype/dist/data/v08/llm-usage.json']
+          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10','prototype/dist/data/v08/forum.json']
+          else:paths+=['prototype/dist/data/v10/forum-batch-status.json']
+          paths=[p for p in paths if Path(p).exists()]
+          if paths:subprocess.run(['git','add','--',*paths],check=True)
+          PYTHON
+          if test -d prototype/dist/data/v08/llm-usage; then git add prototype/dist/data/v08/llm-usage; fi
+          if test -f prototype/dist/data/v08/llm-cache.json; then git add prototype/dist/data/v08/llm-cache.json; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Continue full-directory forum queue and public activity'
+          git pull --rebase
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: global-forum-coverage
+          path: |
+            prototype/dist/data/v10/coverage.json
+            prototype/dist/data/v10/forum-batch-status.json
+            prototype/dist/data/v08/llm-usage.json
+          if-no-files-found: ignore
+          retention-days: 7

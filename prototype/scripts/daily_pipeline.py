@@ -30,6 +30,7 @@ def progress(stage,**fields):
 
 def preflight(root,config):
     required=['prototype/dist/index.html','prototype/dist/data/v07/funds-l1.json','prototype/dist/data/v09/security-identities.json']
+    if config.get('forumDaily',{}).get('mode')=='global-queue':required+=['prototype/dist/data/v10/objects.json','prototype/dist/data/v10/entity-aliases.json','prototype/dist/data/v10/foundation-manifest.json']
     missing=[name for name in required if not (root/name).is_file()]
     prices=u._price()
     price_info=u.pricing_details()
@@ -123,8 +124,14 @@ def run(root,config,collect=False,as_of=None,fetch=None):
         progress('market',ready=status['marketReady'])
     # The existing 119 forum targets are a separate scope. Source-first news covers the whole
     # identity registry, while complete all-market forum crawling would require a separate budget.
-    if config.get('forumDaily',{}).get('enabled') and not fatal:
-        cap=int(config.get('forumDaily',{}).get('maxObjects',119));targets=(config.get('objects') or [])[:cap]
+    if config.get('forumDaily',{}).get('enabled') and config.get('forumDaily',{}).get('mode')=='global-queue' and not fatal:
+        from global_forum import run as run_global_forum
+        result=run_global_forum(root,config,fetch,day,getattr(fetch,'deadline',None))
+        status['forumScope']=result
+        status['forumReady']=result.get('status')=='success'
+        if not status['forumReady']:status['errors'].append(dict(task='forum-global',reason='pending-or-partial; inspect v10/coverage.json'))
+    elif config.get('forumDaily',{}).get('enabled') and not fatal:
+        cap=int(config.get('forumDaily',{}).get('maxObjects',len(config.get('objects') or [])));targets=(config.get('objects') or [])[:cap]
         successes=0;listed={}
         # Finish verified publication-day lists for every target before downloading
         # lengthy threads, so one busy stock cannot starve all later identities.
@@ -157,6 +164,9 @@ def run(root,config,collect=False,as_of=None,fetch=None):
                     if isinstance(exc,TimeoutError):break
         status['forumReady']=successes==len(targets)
         status['forumScope']=dict(targets=len(targets),listed=len(listed),detailed=successes,successful=successes,allMarket=False)
+    if (dest/'v10/objects.json').exists():
+        from publish_object_activity import publish
+        publish(root,day)
     if u.MODEL_CIRCUIT_ERROR:status['errors'].append(dict(task='model',reason=u.MODEL_CIRCUIT_ERROR))
     status['incompleteSources']=[name for name,check in status['sources'].items() if partial_coverage(check)]
     status['status']='success' if status['newsReady'] and not status['errors'] and not status['incompleteSources'] else 'partial' if status['newsReady'] or status['marketReady'] else 'failed'

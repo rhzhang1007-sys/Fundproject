@@ -31,14 +31,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install daily reader dependency
         run: python -m pip install -r prototype/requirements-daily.txt
       - name: Validate deterministic pipeline
         run: |
           python -m unittest discover -s prototype/tests -p 'test_public_updates*.py'
           python -m unittest discover -s prototype/tests -p 'test_news_pipeline.py'
+          python -m unittest discover -s prototype/tests -p 'test_global_*.py'
       - name: Validate website data interfaces
-        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
+        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/web-ai-server.test.mjs
       - name: Check runtime configuration without collecting
         env:
           LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
@@ -54,6 +58,12 @@ jobs:
           config=json.load(open('prototype/config/public-updates.json'))
           print('enabled='+('true' if config.get('enabled') is True else 'false'))
           PY
+      - name: Restore private resumable corpus
+        id: corpus_restore
+        if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/github_corpus_cache.py pull
       - name: Daily news, market facts and forum processing
         id: collect
         if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
@@ -63,13 +73,21 @@ jobs:
           LLM_MODEL: glm-5.3-flash
           LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
         run: python prototype/scripts/daily_pipeline.py --collect
+      - name: Save and verify private corpus checkpoint
+        id: corpus_save
+        if: always() && steps.corpus_restore.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/github_corpus_cache.py push
       - name: Persist validated data, status and budget ledger
+        env:
+          CORPUS_SAVED: ${{ steps.corpus_save.outcome }}
         if: always() && github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           python - <<'PY'
-          import json,subprocess
+          import json,subprocess,os
           from pathlib import Path
           status=Path('prototype/dist/data/v09/update-status.json')
           ready=json.loads(status.read_text()) if status.exists() else {}
@@ -78,8 +96,10 @@ jobs:
           if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
           # A successful earlier forum object is retained even if a later source failed.
           paths+=['prototype/dist/data/v08/forum.json']
+          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/']
           existing=[p for p in paths if Path(p).exists()]
           if existing:subprocess.run(['git','add','--',*existing],check=True)
+          if Path('prototype/dist/data/archive').exists():subprocess.run(['git','add','-A','--','prototype/dist/data/archive'],check=True)
           PY
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update public news and dated market observations'

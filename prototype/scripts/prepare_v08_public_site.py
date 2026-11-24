@@ -32,6 +32,13 @@ def prepare(root, destination):
         extra=source/name
         if extra.exists():
             target=destination/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(extra,target)
+    global_data=source/'data/v10'
+    if global_data.exists():
+        for filename in ['objects.json','entity-aliases.json','foundation-manifest.json','coverage.json']:
+            if (global_data/filename).exists():
+                target=destination/'data/v10'/filename;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(global_data/filename,target)
+        for folder in ['foundation','activity','relationships']:
+            if (global_data/folder).exists():shutil.copytree(global_data/folder,destination/'data/v10'/folder,dirs_exist_ok=True)
     catalog=json.loads((source/'data/catalog.json').read_text());catalog.pop('defaultWeights',None);catalog['sources']=[s for s in catalog.get('sources',[]) if s.get('visibility')!='internal']
     target=destination/'data/catalog.json';target.parent.mkdir(parents=True,exist_ok=True);target.write_text(json.dumps(catalog,ensure_ascii=False,separators=(',',':')))
     # This source file contains public fund data; remove the old default portfolio proportions.

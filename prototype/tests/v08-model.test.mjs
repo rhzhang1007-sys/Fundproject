@@ -35,3 +35,5 @@ test('同代码基金与股票的时间轴不会串对象',()=>{
  assert.deepEqual(eventSelection(es,m,'fund','fund000001','2026-11-24').map(x=>x.id),['fund']);
  assert.deepEqual(eventSelection(es,m,'company','stock000001','2026-11-24').map(x=>x.id),['stock']);
 });
+
+test('未持有基金也可使用公开持仓关系筛新闻，不改私人组合',async()=>{const {selectionModel}=await import('../dist/v08-model.mjs');const current={funds:[],companies:[]};const selected=selectionModel(current,[{id:'fund000001',code:'000001',holdings:[{code:'600000'}]}],'fund000001');assert.equal(current.funds.length,0);assert.equal(selected.funds.length,1);assert.equal(eventSelection([{date:'2026-11-24',entities:[{kind:'stock',code:'600000'}]}],selected,'fund','fund000001','2026-11-25').length,1);});

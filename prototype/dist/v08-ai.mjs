@@ -24,13 +24,17 @@ export function validateAIResult(raw,task,materials,question=''){
  return {title,verdict:value.verdict,points:value.points.map(p=>({text:p.text,sourceIds:p.sourceIds}))};
 }
 export async function requestAI(cfg,task,materials,question=''){
+ if((cfg.mode||'custom')==='shared'){
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),50000);
+  try{const r=await fetch('/api/ai',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({task,materials,question})});const data=await r.json();if(!r.ok)throw Error(data.error||'默认AI暂不可用');return validateAIResult(JSON.stringify(data.result),task,materials,question);}finally{clearTimeout(timer);}
+ }
  if(!cfg.url||!cfg.key||!cfg.model)throw Error('请先在设置中填写模型接口');
  let parsed;try{parsed=new URL(cfg.url);}catch{throw Error('接口地址无效');}if(!['https:','http:'].includes(parsed.protocol))throw Error('接口地址无效');
  let error;
  for(let attempt=0;attempt<2;attempt++){
   const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),45000);
   try{
-   const r=await fetch(cfg.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,messages:[{role:'system',content:PROMPTS[task]},{role:'user',content:JSON.stringify({question,materials})}],temperature:.1,max_tokens:1200})});
+   const r=await fetch(cfg.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,messages:[{role:'system',content:PROMPTS[task]},{role:'user',content:JSON.stringify({question,materials})}],temperature:/^glm-5\.3/i.test(cfg.model)?1:.1,max_tokens:/^glm-5\.3/i.test(cfg.model)?8192:1600})});
    if(!r.ok)throw Error('接口请求失败（'+r.status+'）');
    const data=await r.json();return validateAIResult(data?.choices?.[0]?.message?.content||data?.output_text||'',task,materials,question);
   }catch(e){error=e;if(e.name==='AbortError'||/接口请求失败/.test(e.message))break;}finally{clearTimeout(timer);}

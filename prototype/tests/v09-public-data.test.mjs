@@ -13,3 +13,5 @@ test('同记录重复及无日期事件不能替换网页当前数据',()=>{
  assert.throws(()=>validatePublicData('v07/events.json',{events:[event,event]}));assert.throws(()=>validatePublicData('v07/events.json',{events:[{...event,date:null}]}));
  assert.equal(validatePublicData('v07/events.json',{events:[event]}).events.length,1);
 });
+
+test('对象分片拒绝串角色和不属于该条新闻的模型引用',()=>{assert.match(publicDataUrl('v10/activity/funds/01.json'),/v10\/activity/);assert.throws(()=>validatePublicData('v10/activity/funds/01.json',{schemaVersion:1,objects:{stock000001:{news:[]}}}));const e={id:'e',title:'公告',date:'2026-11-24',url:'https://example.com',analysis:{points:[{text:'正文',sourceIds:['other']}]}};assert.throws(()=>validatePublicData('v07/events.json',{events:[e]}));});

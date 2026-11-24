@@ -1,0 +1,58 @@
+"""Join public news/forum references to every known identity, without a holding dependency."""
+from datetime import datetime,timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
+import json
+from build_global_foundation import load,write,shard
+
+def publish(root,as_of=None):
+    root=Path(root);dist=root/'prototype/dist/data';today=as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date();start=(today-timedelta(days=29)).isoformat();end=today.isoformat()
+    registry=load(dist/'v10/objects.json')['objects'];known={x['id'] for x in registry};groups={}
+    for kind in ['fund','stock']:
+        for i in range(100):
+            name=f'{kind}s/{i:02d}.json';path=root/'prototype/.public-corpus/activity'/name;public_path=dist/'v10/activity'/name;data=load(path) if path.exists() else load(public_path) if public_path.exists() else dict(schemaVersion=1,objects={})
+            for oid,value in list(data['objects'].items()):
+                if oid not in known:raise ValueError('Unknown stored object identity')
+                value['news']=[];forum=value.setdefault('forum',{})
+                for field in ['records','metrics','claims']:forum[field]=[r for r in forum.get(field,[]) if start<=r.get('date','')<=end]
+            groups[name]=data
+    from news_llm_queue import material_sha
+    analysis_path=dist/'v10/news-analysis.json';analysis=load(analysis_path).get('records',{}) if analysis_path.exists() else {}
+    orphan=set();news_source=load(dist/'v07/events.json');events=news_source.get('events',[])
+    for event in events:
+        if not start<=event['date']<=end:continue
+        organized=analysis.get(event['id']);event=dict(event)
+        if organized and organized.get('materialSha')==material_sha(event):event['analysis']=organized
+        for entity in event.get('entities') or []:
+            oid=entity.get('kind','')+entity.get('code','')
+            if oid not in known:
+                if entity.get('kind') not in ('market','unassigned'):orphan.add(oid)
+                continue
+            key=f"{entity['kind']}s/{shard(entity['code'])}.json";entry=groups[key]['objects'].setdefault(oid,{'news':[],'forum':{}})
+            if not any(x['id']==event['id'] for x in entry['news']):entry['news'].append(event)
+    # One-time migration preserves earlier public posts; new readers write directly to shards.
+    legacy=dist/'v08/forum.json'
+    if legacy.exists():
+        old=load(legacy)
+        for field in ['records','metrics','claims']:
+            for row in old.get(field,[]):
+                oid=row['objectId']
+                if oid not in known or not start<=row.get('date','')<=end:continue
+                kind='fund' if oid.startswith('fund') else 'stock';key=f'{kind}s/{shard(oid[len(kind):])}.json';entry=groups[key]['objects'].setdefault(oid,{'news':[],'forum':{}})['forum'];items=entry.setdefault(field,[])
+                identity=(lambda x:x.get('id')) if field=='records' else (lambda x:x.get('date'))
+                if not any(identity(x)==identity(row) for x in items):items.append(row)
+    for key,value in groups.items():
+        write(root/'prototype/.public-corpus/activity'/key,value)
+        public=dict(schemaVersion=1,objects={})
+        for oid,entry in value['objects'].items():
+            forum=entry.get('forum',{});claims=forum.get('claims',[]);cited={pid for block in claims for claim in block.get('claims',[]) for pid in claim.get('postIds',[])}
+            # Full material stays in the resumable corpus. Frontend receives only what it can use.
+            metadata=[{k:r.get(k) for k in ['id','objectId','title','url','date','source','readCount','commentCount']} for r in forum.get('records',[]) if r['id'] in cited]
+            metrics=sorted(forum.get('metrics',[]),key=lambda x:x['date'])[-1:]
+            public['objects'][oid]=dict(news=entry.get('news',[]),forum=dict(records=metadata,claims=claims,metrics=metrics,listCoverage=forum.get('listCoverage'),storedPostCount=len(forum.get('records',[]))))
+        write(dist/'v10/activity'/key,public)
+    state_path=dist/'v10/forum-state.json';state=load(state_path) if state_path.exists() else {};states=state.get('objects',{});target=(today-timedelta(days=1)).isoformat();complete=sum(x.get('throughDay','')>=target for x in states.values())
+    coverage=dict(schemaVersion=1,scope={'funds':sum(x['kind']=='fund' for x in registry),'stocks':sum(x['kind']=='stock' for x in registry),'allDirectoryIdentitiesQueued':True,'basis':'known-source-directory; not confirmed regulatory universe'},asOf=end,forum={'targetDay':target,'listedThroughTarget':complete,'pending':len(registry)-complete,'allComplete':complete==len(registry),'objectsWithStoredPosts':sum(bool(v.get('forum',{}).get('records')) for g in groups.values() for v in g['objects'].values()),'modelBudgetCNY':5,'commentsMayBePartial':True},news={'retentionDays':30,'lastCheckedAt':news_source.get('lastCheckedAt') or news_source.get('builtAt'),'records':sum(start<=e['date']<=end for e in events),'unassignedRecords':sum(any(t.get('kind')=='unassigned' for t in e.get('entities',[])) for e in events),'unresolvedIdentities':sorted(orphan)},publicLibrary={'identityShells':len(registry),'fundDetailRecords':load(dist/'v10/foundation-manifest.json')['fundDetails'],'fullTextCoverage':'partial; never implied by identity shells'})
+    write(dist/'v10/coverage.json',coverage);return coverage
+
+if __name__=='__main__':print(json.dumps(publish(Path(__file__).resolve().parents[2]),ensure_ascii=False))

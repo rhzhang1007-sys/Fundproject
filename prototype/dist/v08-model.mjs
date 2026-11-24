@@ -48,3 +48,9 @@ export function eventSelection(events,model,mode,id,now,older=false) {
     return match&&e.date<=end&&(older||e.date>=start);
   }).sort((a,b)=>b.date.localeCompare(a.date));
 }
+// Public selection can use known relations even when the user does not own the fund.
+export function selectionModel(model,publicFunds,id){
+ if(!String(id).startsWith('fund')||model.funds.some(x=>x.id===id))return model;
+ const selected=publicFunds.find(x=>x.id===id||'fund'+x.code===id);
+ return selected?{...model,funds:[...model.funds,{...selected,id,holdings:selected.holdings||[]}]}:model;
+}
