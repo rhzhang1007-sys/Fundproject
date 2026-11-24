@@ -10,10 +10,11 @@ import os
 from pathlib import Path
 import time
 from zoneinfo import ZoneInfo
+from urllib.parse import urlparse
 import refresh_public_data as u
 from public_news import EntityIndex,runtime_entities,collect_fast,collect_fund_announcements,collect_company_announcements,prepare_events
 from public_transport import CurlPublicFetcher
-from market_public import collect_boards,collect_valuations,merge_valuations
+from market_public import collect_boards,collect_focus_boards,collect_valuations,merge_valuations
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -32,9 +33,13 @@ def preflight(root,config):
     missing=[name for name in required if not (root/name).is_file()]
     prices=u._price()
     price_info=u.pricing_details()
+    url,_,model=u.llm_config()
     return dict(sourceFilesReady=not missing,missingFiles=missing,collectionEnabled=config.get('enabled') is True,
         publishEnabled=config.get('publishEnabled') is True,modelConfigured=bool(u.llm_config()[0]),
         modelPricesConfigured=all(x is not None for x in prices),modelPricingSource=price_info['source'],budgetCNY=u._budget(),
+        modelMatchesDiscussedSelection=bool(model and model.lower() in ('glm-5.3-flashx','glm-5.3-flash')),
+        providerMatchesDiscussedSelection=bool(url and urlparse(url).hostname=='api.zhizengzeng.com'),
+        endpointIsChatCompletions=bool(url and urlparse(url).path.rstrip('/').endswith('/chat/completions')),
         cronUTC='30 0 * * *',timezone='Asia/Shanghai',credentialsIncluded=False)
 
 
@@ -43,6 +48,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
     dest=root/'prototype/dist/data';now=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
     if not collect:return preflight(root,config)
     if config.get('enabled') is not True:raise ValueError('Daily collection disabled')
+    u.MODEL_CIRCUIT_ERROR=None
     checks=preflight(root,config)
     if not checks['sourceFilesReady']:raise ValueError('Missing prepared source files')
     fetch=fetch or CurlPublicFetcher(config.get('requestIntervalSeconds',1),deadline=time.monotonic()+int(config.get('dailyDeadlineSeconds',2400)))
@@ -87,7 +93,17 @@ def run(root,config,collect=False,as_of=None,fetch=None):
             status['sources']['board-flows']=boards['sourceChecks']
         except u.SourceRefused as exc:
             status['errors'].append(dict(task='board-flows',reason=str(exc)));fatal=True
-        except (ValueError,RuntimeError,TimeoutError,OSError) as exc:status['errors'].append(dict(task='board-flows',reason=str(exc)))
+        except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
+            status['errors'].append(dict(task='board-flows',reason=str(exc)))
+            try:
+                focused=collect_focus_boards(fetch,end,market.get('focusBoards',[]));status['sources']['board-flows-focus']=focused['sourceChecks']
+                if focused['boards']:
+                    combined={(r['kind'],r['id']):r for r in snapshot.get('boards',[])}
+                    for row in focused['boards']:combined[(row['kind'],row['id'])]=row
+                    snapshot['boards']=list(combined.values());snapshot['focusCoverage']=focused
+                    fresh_boards=focused['boards'];status['marketReady']=True
+            except u.SourceRefused as denied:status['errors'].append(dict(task='board-flows-focus',reason=str(denied)));fatal=True
+            except (ValueError,RuntimeError,TimeoutError,OSError) as failed:status['errors'].append(dict(task='board-flows-focus',reason=str(failed)))
         if not fatal:
             try:
                 observations=collect_valuations(lambda url:fetch(url,binary=True),market.get('indexCodes',['399808','930997']),end)
@@ -141,6 +157,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
                     if isinstance(exc,TimeoutError):break
         status['forumReady']=successes==len(targets)
         status['forumScope']=dict(targets=len(targets),listed=len(listed),detailed=successes,successful=successes,allMarket=False)
+    if u.MODEL_CIRCUIT_ERROR:status['errors'].append(dict(task='model',reason=u.MODEL_CIRCUIT_ERROR))
     status['incompleteSources']=[name for name,check in status['sources'].items() if partial_coverage(check)]
     status['status']='success' if status['newsReady'] and not status['errors'] and not status['incompleteSources'] else 'partial' if status['newsReady'] or status['marketReady'] else 'failed'
     status['networkRequests']=getattr(fetch,'calls',None)

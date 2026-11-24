@@ -1462,14 +1462,17 @@
       "name": "CPO概念",
       "kind": "concept",
       "asOf": "2026-11-24",
-      "close": 5596.28,
-      "changePercent": 0.95,
+      "sourceTimestamp": "2026-11-24T15:39:57+08:00",
       "mainNetFlowCNY": 6272471808.0,
-      "mainNetFlowRatioPercent": 2.88,
-      "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+      "mainNetFlowRatioPercent": null,
+      "close": null,
+      "changePercent": null,
       "flowUnit": "CNY",
+      "flowDefinition": "provider-size-classified-main-order-net-traded-value",
       "scheme": "eastmoney-concept-board; levels-and-constituents-may-overlap",
-      "sourceUrl": "https://quote.eastmoney.com/bk/BK1128.html"
+      "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK1128&fn=CPO%E6%A6%82%E5%BF%B5",
+      "sourcePayloadSha256": "a620e284334b55ca511a764163b864904d8f0db2519fa9880109bb6373e94ecf",
+      "sourceRetrievedAt": "2026-11-24T19:38:32+08:00"
     },
     {
       "id": "BK1663",
@@ -1868,14 +1871,17 @@
       "name": "机器人概念",
       "kind": "concept",
       "asOf": "2026-11-24",
-      "close": 1648.15,
-      "changePercent": 0.78,
+      "sourceTimestamp": "2026-11-24T15:39:57+08:00",
       "mainNetFlowCNY": 2079992576.0,
-      "mainNetFlowRatioPercent": 0.67,
-      "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+      "mainNetFlowRatioPercent": null,
+      "close": null,
+      "changePercent": null,
       "flowUnit": "CNY",
+      "flowDefinition": "provider-size-classified-main-order-net-traded-value",
       "scheme": "eastmoney-concept-board; levels-and-constituents-may-overlap",
-      "sourceUrl": "https://quote.eastmoney.com/bk/BK1090.html"
+      "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK1090&fn=%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A6%82%E5%BF%B5",
+      "sourcePayloadSha256": "94a0938154cb27e6f6df418787e461e1747a56bbe57da03d2fb228c94884b8ba",
+      "sourceRetrievedAt": "2026-11-24T19:38:33+08:00"
     },
     {
       "id": "BK1710",
@@ -2800,6 +2806,23 @@
       "flowUnit": "CNY",
       "scheme": "eastmoney-concept-board; levels-and-constituents-may-overlap",
       "sourceUrl": "https://quote.eastmoney.com/bk/BK1141.html"
+    },
+    {
+      "id": "BK0478",
+      "name": "有色金属",
+      "kind": "industry",
+      "asOf": "2026-11-24",
+      "sourceTimestamp": "2026-11-24T15:39:57+08:00",
+      "mainNetFlowCNY": -2069524480.0,
+      "mainNetFlowRatioPercent": null,
+      "close": null,
+      "changePercent": null,
+      "flowUnit": "CNY",
+      "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+      "scheme": "eastmoney-industry-board; levels-and-constituents-may-overlap",
+      "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK0478&fn=%E6%9C%89%E8%89%B2%E9%87%91%E5%B1%9E",
+      "sourcePayloadSha256": "34bec5bd8ec197aa47fd3729ecdfe5caf28e4f14f8c0772ee01dd60e00128a19",
+      "sourceRetrievedAt": "2026-11-24T19:38:26+08:00"
     }
   ],
   "valuations": [
@@ -3502,5 +3525,72 @@
   },
   "updatedAt": "2026-11-24T18:33:52+08:00",
   "coverage": "first-page-samples-only",
-  "targetDay": "2026-11-23"
+  "targetDay": "2026-11-23",
+  "focusCoverage": {
+    "boards": [
+      {
+        "id": "BK0478",
+        "name": "有色金属",
+        "kind": "industry",
+        "asOf": "2026-11-24",
+        "sourceTimestamp": "2026-11-24T15:39:57+08:00",
+        "mainNetFlowCNY": -2069524480.0,
+        "mainNetFlowRatioPercent": null,
+        "close": null,
+        "changePercent": null,
+        "flowUnit": "CNY",
+        "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+        "scheme": "eastmoney-industry-board; levels-and-constituents-may-overlap",
+        "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK0478&fn=%E6%9C%89%E8%89%B2%E9%87%91%E5%B1%9E",
+        "sourcePayloadSha256": "34bec5bd8ec197aa47fd3729ecdfe5caf28e4f14f8c0772ee01dd60e00128a19",
+        "sourceRetrievedAt": "2026-11-24T19:38:26+08:00"
+      },
+      {
+        "id": "BK1128",
+        "name": "CPO概念",
+        "kind": "concept",
+        "asOf": "2026-11-24",
+        "sourceTimestamp": "2026-11-24T15:39:57+08:00",
+        "mainNetFlowCNY": 6272471808.0,
+        "mainNetFlowRatioPercent": null,
+        "close": null,
+        "changePercent": null,
+        "flowUnit": "CNY",
+        "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+        "scheme": "eastmoney-concept-board; levels-and-constituents-may-overlap",
+        "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK1128&fn=CPO%E6%A6%82%E5%BF%B5",
+        "sourcePayloadSha256": "a620e284334b55ca511a764163b864904d8f0db2519fa9880109bb6373e94ecf",
+        "sourceRetrievedAt": "2026-11-24T19:38:32+08:00"
+      },
+      {
+        "id": "BK1090",
+        "name": "机器人概念",
+        "kind": "concept",
+        "asOf": "2026-11-24",
+        "sourceTimestamp": "2026-11-24T15:39:57+08:00",
+        "mainNetFlowCNY": 2079992576.0,
+        "mainNetFlowRatioPercent": null,
+        "close": null,
+        "changePercent": null,
+        "flowUnit": "CNY",
+        "flowDefinition": "provider-size-classified-main-order-net-traded-value",
+        "scheme": "eastmoney-concept-board; levels-and-constituents-may-overlap",
+        "sourceUrl": "https://emdatah5.eastmoney.com/dc/zjlx/stock?fc=90.BK1090&fn=%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A6%82%E5%BF%B5",
+        "sourcePayloadSha256": "94a0938154cb27e6f6df418787e461e1747a56bbe57da03d2fb228c94884b8ba",
+        "sourceRetrievedAt": "2026-11-24T19:38:33+08:00"
+      }
+    ],
+    "sourceChecks": {
+      "BK0478": {
+        "status": "accepted"
+      },
+      "BK1128": {
+        "status": "accepted"
+      },
+      "BK1090": {
+        "status": "accepted"
+      }
+    },
+    "scope": "configured-focus-boards-only"
+  }
 }

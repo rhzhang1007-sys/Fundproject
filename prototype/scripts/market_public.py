@@ -6,6 +6,7 @@ import json
 import math
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
+from refresh_public_data import SourceRefused
 
 QUOTE_UT='b2884a393a59ad64002292a3e90d46a5'  # Public web-client identifier, not a credential.
 
@@ -49,6 +50,38 @@ def collect_boards(fetch,end,max_pages=30):
         checks[kind]=dict(reportedTotal=total,rows=len(unique),acceptedRows=len(accepted),status='source-total-matched' if len(accepted)==len(unique) else 'newer-source-date-not-relabelled')
     return dict(schemaVersion=1,boards=rows,sourceChecks=checks,percentiles=None,
         caveat='板块可重叠，主力成交净额按供应商口径，不是ETF净申购或市场资金新增。')
+
+
+def focus_board(data,target,end):
+    x=data.get('data')
+    if data.get('rc')!=0 or not isinstance(x,dict) or x.get('f57')!=target['id'] or not number(x.get('f86')):raise ValueError('Focused board identity/date mismatch')
+    stamp=datetime.fromtimestamp(x['f86'],ZoneInfo('Asia/Shanghai'));day=stamp.date().isoformat()
+    if day>end:return None
+    return dict(id=x['f57'],name=x['f58'],kind=target['kind'],asOf=day,sourceTimestamp=stamp.isoformat(),
+        mainNetFlowCNY=number(x.get('f137')),mainNetFlowRatioPercent=None,close=None,changePercent=None,flowUnit='CNY',
+        flowDefinition='provider-size-classified-main-order-net-traded-value',scheme='eastmoney-'+target['kind']+'-board; levels-and-constituents-may-overlap',
+        sourceUrl='https://emdatah5.eastmoney.com/dc/zjlx/stock?'+urlencode(dict(fc='90.'+x['f57'],fn=x['f58'])))
+
+
+def collect_focus_boards(fetch,end,targets):
+    rows=[];checks={}
+    for target in targets:
+        try:
+            if not re_board_id(target.get('id')):raise ValueError('Invalid focused board ID')
+            url='https://emdatah5.eastmoney.com/dc/ZJLX/getZJLXData?'+urlencode(dict(secid='90.'+target['id'],fields='f57,f58,f137,f86'))
+            raw=fetch(url);row=focus_board(json.loads(raw),target,end)
+            if row:
+                row.update(sourcePayloadSha256=hashlib.sha256(raw.encode()).hexdigest(),sourceRetrievedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'));rows.append(row)
+            checks[target['id']]=dict(status='accepted' if row else 'newer-source-date-not-relabelled')
+        except SourceRefused:raise
+        except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
+            checks[target['id']]=dict(status='failed',reason=str(exc))
+            if isinstance(exc,TimeoutError):break
+    return dict(boards=rows,sourceChecks=checks,scope='configured-focus-boards-only')
+
+
+def re_board_id(value):
+    return isinstance(value,str) and value.startswith('BK') and value[2:].isdigit()
 
 
 def valuation_xls(raw,expected_code,end):

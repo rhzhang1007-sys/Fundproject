@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import math
 import time
+import unicodedata
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urljoin, urlparse, parse_qsl, urlunparse
 from urllib.request import Request, urlopen
@@ -171,7 +172,9 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
                 stamp=datetime.strptime(at,'%Y-%m-%d %H:%M:%S')
                 pub=datetime.strptime(published,'%Y-%m-%d %H:%M:%S')
             except (ValueError,TypeError): activity_ordered=False; continue
-            if stamp<pub or (last_activity is not None and stamp>last_activity): activity_ordered=False
+            # Provider samples have 15–25 second display/publication clock skew.
+            # The cutoff is a calendar day; same-day clock skew cannot lose a day.
+            if stamp.date()<pub.date() or (last_activity is not None and stamp>last_activity): activity_ordered=False
             last_activity=stamp;activities.append(stamp)
         for x in posts:
             r = _forum_row(x, code, observed or target)
@@ -295,7 +298,13 @@ def match_entities(text, entities):
 def llm_config():
     values=tuple(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL'))
     if not all(values):return (None,None,None)
-    url,key,model=values;url=url.strip().strip('`\"\'');model=model.strip().strip('`\"\'');p=urlparse(url)
+    url,key,model=values
+    def clean(value,label):
+        value=unicodedata.normalize('NFKC',value).strip()
+        value=re.sub(r'^'+label+r'\s*[:=]\s*','',value,flags=re.I)
+        value=re.sub(r'[\u200b-\u200f\u2060\ufeff]','',value)
+        return value.strip().strip('`\"\'“”‘’')
+    url=clean(url,'LLM_API_URL');model=clean(model,'LLM_MODEL');model=re.sub(r'[‐‑‒–—−]','-',model);p=urlparse(url)
     # This gateway documents an OpenAI-compatible /v1/chat/completions endpoint.
     if p.hostname=='api.zhizengzeng.com' and p.path.rstrip('/') in ('','/v1') and not p.query and not p.fragment:
         url='https://api.zhizengzeng.com/v1/chat/completions'
@@ -336,6 +345,7 @@ def _budget():
 LLM_STATE={}
 LLM_USAGE_PATH=None
 LLM_DEADLINE=None
+MODEL_CIRCUIT_ERROR=None
 
 
 def init_llm(path, day):
@@ -389,6 +399,10 @@ def parse_json_loose(text):
 
 
 def _post_llm(url, key, model, messages, max_tokens):
+    global MODEL_CIRCUIT_ERROR
+    if MODEL_CIRCUIT_ERROR:
+        LLM_STATE['lastSkip']='model-circuit-open';return None
+    LLM_STATE.pop('lastSkip',None);LLM_STATE.pop('lastError',None)
     if LLM_DEADLINE and time.monotonic()+95>LLM_DEADLINE:
         LLM_STATE['lastSkip']='run-deadline';return None
     pin,pout=_price()
@@ -432,7 +446,9 @@ def _post_llm(url, key, model, messages, max_tokens):
     except (OSError,ValueError,KeyError,TypeError,IndexError) as exc:
         LLM_STATE['unknownUsageCalls']+=1; LLM_STATE['lastSkip']='model-error'
         LLM_STATE['lastError']=dict(category='transport-or-response',errorType=type(exc).__name__);return None
-    finally: persist_usage()
+    finally:
+        if LLM_STATE.get('lastSkip','').startswith('model-http-') or LLM_STATE.get('lastSkip')=='model-error':MODEL_CIRCUIT_ERROR=LLM_STATE['lastSkip']
+        persist_usage()
 
 
 def llm_json(system,user,max_tokens=None):

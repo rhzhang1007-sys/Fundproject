@@ -873,7 +873,24 @@
       "399808",
       "930997"
     ],
-    "percentilesEnabled": false
+    "percentilesEnabled": false,
+    "focusBoards": [
+      {
+        "id": "BK0478",
+        "name": "有色金属",
+        "kind": "industry"
+      },
+      {
+        "id": "BK1128",
+        "name": "CPO概念",
+        "kind": "concept"
+      },
+      {
+        "id": "BK1090",
+        "name": "机器人概念",
+        "kind": "concept"
+      }
+    ]
   },
   "forumDaily": {
     "enabled": true,

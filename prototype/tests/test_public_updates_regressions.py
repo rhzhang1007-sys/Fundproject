@@ -19,6 +19,7 @@ def row(pid='123'):
     return dict(id=pid,objectId='stock300750',title='宁德时代订单100亿元',content='网友提出观点',comments=[{'text':'同比10%','replyTo':''}],url='https://example.com/'+pid)
 
 class Regressions(unittest.TestCase):
+    def setUp(self):u.MODEL_CIRCUIT_ERROR=None
     def test_verified_gateway_price_and_base_url_need_no_manual_rate_guess(self):
         catalog=dict(reviewAfter='2999-12-31',sourceUrl='https://doc.zhizengzeng.com/doc-3979947',verifiedAt='2026-11-24',basis='published-list-price-before-discount',entries=[dict(host='api.zhizengzeng.com',model='glm-5.3-flashx',input=2,output=7)])
         env=dict(LLM_API_URL='https://api.zhizengzeng.com',LLM_API_KEY='test-only',LLM_MODEL='glm-5.3-flashx')

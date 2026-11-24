@@ -13,7 +13,8 @@ class CurlPublicFetcher:
         if self.refused:raise SourceRefused('Public source refused; stop run')
         host=urlparse(url).hostname or ''
         if not host or not url.startswith('https://'):raise ValueError('Public feeds require HTTPS')
-        referer=('https://fundf10.eastmoney.com/' if host=='api.fund.eastmoney.com' else
+        referer=('https://emdatah5.eastmoney.com/' if host=='emdatah5.eastmoney.com' else
+                 'https://fundf10.eastmoney.com/' if host=='api.fund.eastmoney.com' else
                  'https://guba.eastmoney.com/' if host in ('gbapi.eastmoney.com','guba.eastmoney.com') else
                  'https://stock.eastmoney.com/' if host.endswith('eastmoney.com') else
                  'https://www.csindex.com.cn/' if host.endswith('csindex.com.cn') else 'https://www.cninfo.com.cn/')
