@@ -1,0 +1,67 @@
+{
+ "schemaVersion": 1,
+ "status": "sample-only",
+ "statusNote": "仅为验证界面取的 5 条公告，完整管线尚未运行",
+ "builtAt": "2026-11-23T20:09:41+08:00",
+ "windowDays": 30,
+ "entities": [
+  "300750"
+ ],
+ "events": [
+  {
+   "id": "1225656276",
+   "entityCode": "300750",
+   "entityName": "宁德时代",
+   "title": "关于授予2026年A股第二期员工持股计划预留份额的公告",
+   "summary": "",
+   "date": "2026-11-03",
+   "source": "巨潮资讯",
+   "url": "http://static.cninfo.com.cn/finalpage/2026-11-03/1225656276.PDF",
+   "kind": "公告"
+  },
+  {
+   "id": "1225654266",
+   "entityCode": "300750",
+   "entityName": "宁德时代",
+   "title": "上海市通力律师事务所关于宁德时代新能源科技股份有限公司2026年第二次临时股东会的法律意见书",
+   "summary": "",
+   "date": "2026-11-02",
+   "source": "巨潮资讯",
+   "url": "http://static.cninfo.com.cn/finalpage/2026-11-02/1225654266.PDF",
+   "kind": "公告"
+  },
+  {
+   "id": "1225654265",
+   "entityCode": "300750",
+   "entityName": "宁德时代",
+   "title": "2026年第二次临时股东会决议公告",
+   "summary": "",
+   "date": "2026-11-02",
+   "source": "巨潮资讯",
+   "url": "http://static.cninfo.com.cn/finalpage/2026-11-02/1225654265.PDF",
+   "kind": "公告"
+  },
+  {
+   "id": "1225654264",
+   "entityCode": "300750",
+   "entityName": "宁德时代",
+   "title": "关于回购公司A股股份的进展公告",
+   "summary": "",
+   "date": "2026-11-02",
+   "source": "巨潮资讯",
+   "url": "http://static.cninfo.com.cn/finalpage/2026-11-02/1225654264.PDF",
+   "kind": "公告"
+  },
+  {
+   "id": "1225613177",
+   "entityCode": "300750",
+   "entityName": "宁德时代",
+   "title": "第四届董事会第二十一次会议决议公告",
+   "summary": "",
+   "date": "2026-10-20",
+   "source": "巨潮资讯",
+   "url": "http://static.cninfo.com.cn/finalpage/2026-10-21/1225613177.PDF",
+   "kind": "公告"
+  }
+ ]
+}

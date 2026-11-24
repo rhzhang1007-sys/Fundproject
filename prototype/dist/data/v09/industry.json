@@ -1,0 +1,1106 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "fundCode": "516160",
+      "asOf": "2026-09-30",
+      "publishedAt": "2026-10-27",
+      "retrievedAt": "2026-11-11",
+      "adaptedAt": "2026-11-24",
+      "scheme": "CSRC-major-industry-as-disclosed",
+      "scope": "all-reported-domestic-stocks",
+      "denominator": "fund-net-assets",
+      "complete": true,
+      "sourceId": "nf-q3-2026",
+      "sourceUrl": "https://www.nffund.com/main/files/2026/10/26/167239374557.pdf",
+      "sourceSha256": "f149a30bc49242d6783a397cf89bb32814b1da762d4af84df1c91690267d8200",
+      "locator": "PDF 第9,10页，§5.2",
+      "rows": [
+        {
+          "code": "A",
+          "name": "农、林、牧、渔业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "A",
+              "name": "农、林、牧、渔业",
+              "rawName": "农、林、牧、渔业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "A",
+              "name": "农、林、牧、渔业",
+              "rawName": "农、林、牧、渔业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "B",
+          "name": "采矿业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "B",
+              "name": "采矿业",
+              "rawName": "采矿业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "B",
+              "name": "采矿业",
+              "rawName": "采矿业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "C",
+          "name": "制造业",
+          "valueCNY": 3091656262.61,
+          "weightPercent": 88.08,
+          "parts": [
+            {
+              "code": "C",
+              "name": "制造业",
+              "rawName": "制造业",
+              "valueCNY": 3070951979.61,
+              "weightPercent": 87.49,
+              "rawValue": "3,070,951,979.61",
+              "rawWeight": "87.49",
+              "explicitAbsent": false
+            },
+            {
+              "code": "C",
+              "name": "制造业",
+              "rawName": "制造业",
+              "valueCNY": 20704283.0,
+              "weightPercent": 0.59,
+              "rawValue": "20,704,283.00",
+              "rawWeight": "0.59",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "D",
+          "name": "电力、热力、燃气及水生产和供应业",
+          "valueCNY": 393173697.93,
+          "weightPercent": 11.21,
+          "parts": [
+            {
+              "code": "D",
+              "name": "电力、热力、燃气及水生产和供应业",
+              "rawName": "电力、热力、燃气及水生产和供应业",
+              "valueCNY": 392623824.11,
+              "weightPercent": 11.19,
+              "rawValue": "392,623,824.11",
+              "rawWeight": "11.19",
+              "explicitAbsent": false
+            },
+            {
+              "code": "D",
+              "name": "电力、热力、燃气及水生产和供应业",
+              "rawName": "电力、热力、燃气及水生产和供应业",
+              "valueCNY": 549873.82,
+              "weightPercent": 0.02,
+              "rawValue": "549,873.82",
+              "rawWeight": "0.02",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "E",
+          "name": "建筑业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "E",
+              "name": "建筑业",
+              "rawName": "建筑业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "E",
+              "name": "建筑业",
+              "rawName": "建筑业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "F",
+          "name": "批发和零售业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "F",
+              "name": "批发和零售业",
+              "rawName": "批发和零售业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "F",
+              "name": "批发和零售业",
+              "rawName": "批发和零售业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "G",
+          "name": "交通运输、仓储和邮政业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "G",
+              "name": "交通运输、仓储和邮政业",
+              "rawName": "交通运输、仓储和邮政业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "G",
+              "name": "交通运输、仓储和邮政业",
+              "rawName": "交通运输、仓储和邮政业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "H",
+          "name": "住宿和餐饮业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "H",
+              "name": "住宿和餐饮业",
+              "rawName": "住宿和餐饮业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "H",
+              "name": "住宿和餐饮业",
+              "rawName": "住宿和餐饮业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "I",
+          "name": "信息传输、软件和信息技术服务业",
+          "valueCNY": 1194138.4,
+          "weightPercent": 0.03,
+          "parts": [
+            {
+              "code": "I",
+              "name": "信息传输、软件和信息技术服务业",
+              "rawName": "信息传输、软件和信息技术服",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "I",
+              "name": "信息传输、软件和信息技术服务业",
+              "rawName": "信息传输、软件和信息技术服务业",
+              "valueCNY": 1194138.4,
+              "weightPercent": 0.03,
+              "rawValue": "1,194,138.40",
+              "rawWeight": "0.03",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "J",
+          "name": "金融业",
+          "valueCNY": 19592107.92,
+          "weightPercent": 0.56,
+          "parts": [
+            {
+              "code": "J",
+              "name": "金融业",
+              "rawName": "金融业",
+              "valueCNY": 19592107.92,
+              "weightPercent": 0.56,
+              "rawValue": "19,592,107.92",
+              "rawWeight": "0.56",
+              "explicitAbsent": false
+            },
+            {
+              "code": "J",
+              "name": "金融业",
+              "rawName": "金融业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "K",
+          "name": "房地产业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "K",
+              "name": "房地产业",
+              "rawName": "房地产业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "K",
+              "name": "房地产业",
+              "rawName": "房地产业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "L",
+          "name": "租赁和商务服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "L",
+              "name": "租赁和商务服务业",
+              "rawName": "租赁和商务服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "L",
+              "name": "租赁和商务服务业",
+              "rawName": "租赁和商务服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "M",
+          "name": "科学研究和技术服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "M",
+              "name": "科学研究和技术服务业",
+              "rawName": "科学研究和技术服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "M",
+              "name": "科学研究和技术服务业",
+              "rawName": "科学研究和技术服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "N",
+          "name": "水利、环境和公共设施管理业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "N",
+              "name": "水利、环境和公共设施管理业",
+              "rawName": "水利、环境和公共设施管理业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "N",
+              "name": "水利、环境和公共设施管理业",
+              "rawName": "水利、环境和公共设施管理业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "O",
+          "name": "居民服务、修理和其他服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "O",
+              "name": "居民服务、修理和其他服务业",
+              "rawName": "居民服务、修理和其他服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "O",
+              "name": "居民服务、修理和其他服务业",
+              "rawName": "居民服务、修理和其他服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "P",
+          "name": "教育",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "P",
+              "name": "教育",
+              "rawName": "教育",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "P",
+              "name": "教育",
+              "rawName": "教育",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "Q",
+          "name": "卫生和社会工作",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "Q",
+              "name": "卫生和社会工作",
+              "rawName": "卫生和社会工作",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "Q",
+              "name": "卫生和社会工作",
+              "rawName": "卫生和社会工作",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "R",
+          "name": "文化、体育和娱乐业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "R",
+              "name": "文化、体育和娱乐业",
+              "rawName": "文化、体育和娱乐业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "R",
+              "name": "文化、体育和娱乐业",
+              "rawName": "文化、体育和娱乐业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "S",
+          "name": "综合",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "S",
+              "name": "综合",
+              "rawName": "综合",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "S",
+              "name": "综合",
+              "rawName": "综合",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        }
+      ],
+      "roundedRowWeightSum": 99.88
+    },
+    {
+      "fundCode": "515700",
+      "asOf": "2026-09-30",
+      "publishedAt": "2026-10-26",
+      "retrievedAt": "2026-11-11",
+      "adaptedAt": "2026-11-24",
+      "scheme": "CSRC-major-industry-as-disclosed",
+      "scope": "all-reported-domestic-stocks",
+      "denominator": "fund-net-assets",
+      "complete": true,
+      "sourceId": "pa-q3-2026",
+      "sourceUrl": "https://fund.pingan.com/nasfile/1792976268912.pdf",
+      "sourceSha256": "799f37474662c2c86a21903e7b3b4df5260c3267e0965862bd775eaea9bce3fb",
+      "locator": "PDF 第7,8页，§5.2",
+      "rows": [
+        {
+          "code": "A",
+          "name": "农、林、牧、渔业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "A",
+              "name": "农、林、牧、渔业",
+              "rawName": "农、林、牧、渔业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "A",
+              "name": "农、林、牧、渔业",
+              "rawName": "农、林、牧、渔业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "B",
+          "name": "采矿业",
+          "valueCNY": 6291198.77,
+          "weightPercent": 0.56,
+          "parts": [
+            {
+              "code": "B",
+              "name": "采矿业",
+              "rawName": "采矿业",
+              "valueCNY": 6287808.02,
+              "weightPercent": 0.56,
+              "rawValue": "6,287,808.02",
+              "rawWeight": "0.56",
+              "explicitAbsent": false
+            },
+            {
+              "code": "B",
+              "name": "采矿业",
+              "rawName": "采矿业",
+              "valueCNY": 3390.75,
+              "weightPercent": 0.0,
+              "rawValue": "3,390.75",
+              "rawWeight": "0.00",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "C",
+          "name": "制造业",
+          "valueCNY": 1109461899.79,
+          "weightPercent": 98.01,
+          "parts": [
+            {
+              "code": "C",
+              "name": "制造业",
+              "rawName": "制造业",
+              "valueCNY": 1099633027.65,
+              "weightPercent": 97.14,
+              "rawValue": "1,099,633,027.65",
+              "rawWeight": "97.14",
+              "explicitAbsent": false
+            },
+            {
+              "code": "C",
+              "name": "制造业",
+              "rawName": "制造业",
+              "valueCNY": 9828872.14,
+              "weightPercent": 0.87,
+              "rawValue": "9,828,872.14",
+              "rawWeight": "0.87",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "D",
+          "name": "电力、热力、燃气及水生产和供应业",
+          "valueCNY": 525683.22,
+          "weightPercent": 0.05,
+          "parts": [
+            {
+              "code": "D",
+              "name": "电力、热力、燃气及水生产和供应业",
+              "rawName": "电力、热力、燃气及水生产和供应业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "D",
+              "name": "电力、热力、燃气及水生产和供应业",
+              "rawName": "电力、热力、燃气及水生产和供应业",
+              "valueCNY": 525683.22,
+              "weightPercent": 0.05,
+              "rawValue": "525,683.22",
+              "rawWeight": "0.05",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "E",
+          "name": "建筑业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "E",
+              "name": "建筑业",
+              "rawName": "建筑业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "E",
+              "name": "建筑业",
+              "rawName": "建筑业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "F",
+          "name": "批发和零售业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "F",
+              "name": "批发和零售业",
+              "rawName": "批发和零售业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "F",
+              "name": "批发和零售业",
+              "rawName": "批发和零售业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "G",
+          "name": "交通运输、仓储和邮政业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "G",
+              "name": "交通运输、仓储和邮政业",
+              "rawName": "交通运输、仓储和邮政业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "G",
+              "name": "交通运输、仓储和邮政业",
+              "rawName": "交通运输、仓储和邮政业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "H",
+          "name": "住宿和餐饮业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "H",
+              "name": "住宿和餐饮业",
+              "rawName": "住宿和餐饮业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "H",
+              "name": "住宿和餐饮业",
+              "rawName": "住宿和餐饮业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "I",
+          "name": "信息传输、软件和信息技术服务业",
+          "valueCNY": 900196.64,
+          "weightPercent": 0.08,
+          "parts": [
+            {
+              "code": "I",
+              "name": "信息传输、软件和信息技术服务业",
+              "rawName": "信息传输、软件和信息技术服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "I",
+              "name": "信息传输、软件和信息技术服务业",
+              "rawName": "信息传输、软件和信息技术服务业",
+              "valueCNY": 900196.64,
+              "weightPercent": 0.08,
+              "rawValue": "900,196.64",
+              "rawWeight": "0.08",
+              "explicitAbsent": false
+            }
+          ]
+        },
+        {
+          "code": "J",
+          "name": "金融业",
+          "valueCNY": 9094384.53,
+          "weightPercent": 0.8,
+          "parts": [
+            {
+              "code": "J",
+              "name": "金融业",
+              "rawName": "金融业",
+              "valueCNY": 9094384.53,
+              "weightPercent": 0.8,
+              "rawValue": "9,094,384.53",
+              "rawWeight": "0.80",
+              "explicitAbsent": false
+            },
+            {
+              "code": "J",
+              "name": "金融业",
+              "rawName": "金融业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "K",
+          "name": "房地产业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "K",
+              "name": "房地产业",
+              "rawName": "房地产业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "K",
+              "name": "房地产业",
+              "rawName": "房地产业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "L",
+          "name": "租赁和商务服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "L",
+              "name": "租赁和商务服务业",
+              "rawName": "租赁和商务服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "L",
+              "name": "租赁和商务服务业",
+              "rawName": "租赁和商务服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "M",
+          "name": "科学研究和技术服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "M",
+              "name": "科学研究和技术服务业",
+              "rawName": "科学研究和技术服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "M",
+              "name": "科学研究和技术服务业",
+              "rawName": "科学研究和技术服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "N",
+          "name": "水利、环境和公共设施管理业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "N",
+              "name": "水利、环境和公共设施管理业",
+              "rawName": "水利、环境和公共设施管理业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "N",
+              "name": "水利、环境和公共设施管理业",
+              "rawName": "水利、环境和公共设施管理业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "O",
+          "name": "居民服务、修理和其他服务业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "O",
+              "name": "居民服务、修理和其他服务业",
+              "rawName": "居民服务、修理和其他服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "O",
+              "name": "居民服务、修理和其他服务业",
+              "rawName": "居民服务、修理和其他服务业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "P",
+          "name": "教育",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "P",
+              "name": "教育",
+              "rawName": "教育",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "P",
+              "name": "教育",
+              "rawName": "教育",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "Q",
+          "name": "卫生和社会工作",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "Q",
+              "name": "卫生和社会工作",
+              "rawName": "卫生和社会工作",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "Q",
+              "name": "卫生和社会工作",
+              "rawName": "卫生和社会工作",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "R",
+          "name": "文化、体育和娱乐业",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "R",
+              "name": "文化、体育和娱乐业",
+              "rawName": "文化、体育和娱乐业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "R",
+              "name": "文化、体育和娱乐业",
+              "rawName": "文化、体育和娱乐业",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        },
+        {
+          "code": "S",
+          "name": "综合",
+          "valueCNY": 0.0,
+          "weightPercent": 0.0,
+          "parts": [
+            {
+              "code": "S",
+              "name": "综合",
+              "rawName": "综合",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            },
+            {
+              "code": "S",
+              "name": "综合",
+              "rawName": "综合",
+              "valueCNY": 0.0,
+              "weightPercent": 0.0,
+              "rawValue": "-",
+              "rawWeight": "-",
+              "explicitAbsent": true
+            }
+          ]
+        }
+      ],
+      "roundedRowWeightSum": 99.5
+    }
+  ],
+  "note": "行业门类按报告直接披露，不从基金名称推算；报告日与当前持仓金额分开。主题标签另存，不与门类混加。"
+}

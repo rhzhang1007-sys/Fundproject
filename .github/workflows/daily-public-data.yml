@@ -1,0 +1,90 @@
+name: Daily public data
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/daily-public-data.yml'
+      - 'prototype/scripts/**'
+      - 'prototype/config/public-updates.json'
+      - 'prototype/requirements-daily.txt'
+  schedule:
+    # 08:30 Asia/Shanghai; GitHub scheduling can be delayed.
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: daily-public-data
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A queued run must see the latest committed daily budget, not an old push SHA.
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install daily reader dependency
+        run: python -m pip install -r prototype/requirements-daily.txt
+      - name: Validate deterministic pipeline
+        run: |
+          python -m unittest discover -s prototype/tests -p 'test_public_updates*.py'
+          python -m unittest discover -s prototype/tests -p 'test_news_pipeline.py'
+      - name: Read collection switch
+        id: gate
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          config=json.load(open('prototype/config/public-updates.json'))
+          print('enabled='+('true' if config.get('enabled') is True else 'false'))
+          PY
+      - name: Daily news, market facts and forum processing
+        id: collect
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
+          LLM_PRICE_IN: ${{ vars.LLM_PRICE_IN }}
+          LLM_PRICE_OUT: ${{ vars.LLM_PRICE_OUT }}
+        run: python prototype/scripts/daily_pipeline.py --collect
+      - name: Persist validated data, status and budget ledger
+        if: always() && steps.gate.outputs.enabled == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          status=Path('prototype/dist/data/v09/update-status.json')
+          ready=json.loads(status.read_text()) if status.exists() else {}
+          paths=['prototype/dist/data/v09/update-status.json','prototype/dist/data/v08/llm-usage.json','prototype/dist/data/v08/llm-usage','prototype/dist/data/v08/llm-cache.json','output/抽检-每日']
+          if ready.get('newsReady'): paths+=['prototype/dist/data/v07/events.json','prototype/dist/data/archive']
+          if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json']
+          # A successful earlier forum object is retained even if a later source failed.
+          paths+=['prototype/dist/data/v08/forum.json']
+          existing=[p for p in paths if Path(p).exists()]
+          if existing:subprocess.run(['git','add','--',*existing],check=True)
+          PY
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Update public news and dated market observations'
+          git pull --rebase
+          git push
+      - name: Save readable run report
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-data-status
+          path: |
+            prototype/dist/data/v09/update-status.json
+            prototype/dist/data/v08/llm-usage.json
+            output/抽检-每日/
+          if-no-files-found: ignore
+          retention-days: 14
