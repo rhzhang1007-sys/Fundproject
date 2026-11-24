@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "date": "2026-11-24",
-  "calls": 3,
-  "promptTokens": 0,
-  "completionTokens": 0,
-  "costCNY": 0.0,
-  "reservedCNY": 0.091286,
-  "unknownUsageCalls": 3,
+  "calls": 5,
+  "promptTokens": 35,
+  "completionTokens": 44,
+  "costCNY": 0.000378,
+  "reservedCNY": 0.157144,
+  "unknownUsageCalls": 4,
   "stoppedByBudget": false,
   "skipped": [
     {
@@ -77,10 +77,5 @@
     "source": "configured-variables",
     "basis": "configured-budget-reference"
   },
-  "costIsEstimate": true,
-  "lastSkip": "model-http-502",
-  "lastError": {
-    "status": 502,
-    "category": "upstream-request-rejected"
-  }
+  "costIsEstimate": true
 }

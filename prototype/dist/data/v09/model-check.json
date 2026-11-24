@@ -1,11 +1,13 @@
 {
-  "requestId": "2026-11-24-visible-flashx-model-4",
-  "checkedAt": "2026-11-24T20:05:52+08:00",
+  "requestId": "2026-11-24-minimal-standard-endpoint-5",
+  "checkedAt": "2026-11-24T20:24:52+08:00",
   "ok": false,
   "reason": "model-http-502",
   "error": {
     "status": 502,
-    "category": "upstream-request-rejected"
+    "category": "upstream-request-rejected",
+    "summary": "request failed",
+    "contentType": "application/json; charset=utf-8"
   },
   "directory": {
     "httpStatus": 200,
@@ -16,7 +18,14 @@
       "glm-5.3-flash"
     ]
   },
-  "latencySeconds": 3.63,
+  "comparison": {
+    "model": "glm-5.3-flash",
+    "ok": true,
+    "error": null,
+    "latencySeconds": 3.75,
+    "budgetBasis": "same conservative 2/7 reference; not an invoice"
+  },
+  "latencySeconds": 6.85,
   "pricingSource": "configured-variables",
   "expectedModel": true,
   "expectedProvider": true,
