@@ -148,7 +148,7 @@ class ForumDayRows(list):
 
 
 def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
-    """Official sorttype=0 is 最新发帖; verify its display/publication boundary.
+    """Official sorttype=0 is 最新发帖; verify the publication-day boundary.
 
     Last-reply ordering can reorder old threads across pages and must not be used
     to conclude a publication-day sample is complete.
@@ -167,14 +167,13 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
         activities=[]
         for x in posts:
             if x.get('post_top_status') not in (None,0): continue
-            at=x.get('post_display_time') or x.get('post_publish_time'); published=x.get('post_publish_time')
+            published=x.get('post_publish_time')
             try:
-                stamp=datetime.strptime(at,'%Y-%m-%d %H:%M:%S')
-                pub=datetime.strptime(published,'%Y-%m-%d %H:%M:%S')
+                stamp=datetime.strptime(str(published)[:10],'%Y-%m-%d').date()
             except (ValueError,TypeError): activity_ordered=False; continue
-            # Provider samples have 15–25 second display/publication clock skew.
-            # The cutoff is a calendar day; same-day clock skew cannot lose a day.
-            if stamp.date()<pub.date() or (last_activity is not None and stamp>last_activity): activity_ordered=False
+            # The frontend display clock can be backdated or rounded to midnight.
+            # Keep it as metadata; select and bound by the same publication date.
+            if last_activity is not None and stamp>last_activity: activity_ordered=False
             last_activity=stamp;activities.append(stamp)
         for x in posts:
             r = _forum_row(x, code, observed or target)
@@ -183,7 +182,7 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
             seen.add(r['id']); rows.append(r)
             if max_posts and len(rows) > max_posts:
                 raise IncompleteSource('Daily post safety limit exceeded')
-        if activity_ordered and activities and activities[-1].date().isoformat()<target:
+        if activity_ordered and activities and activities[-1].isoformat()<target:
             rows.coverage='publication-boundary'; return rows
     raise IncompleteSource('Forum page safety limit reached; daily coverage unproven')
 

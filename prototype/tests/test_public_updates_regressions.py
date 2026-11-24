@@ -138,6 +138,11 @@ class Regressions(unittest.TestCase):
         def fetch(url):urls.append(url);return json.dumps({'rc':1,'re':rows})
         result=u.forum_day(fetch,'300750','2026-11-23')
         self.assertEqual(len(urls),1);self.assertIn('sorttype=0',urls[0]);self.assertEqual([x['id'] for x in result],['2'])
+    def test_frontend_display_dates_do_not_poison_publication_day_scan(self):
+        rows=[post('1','2026-11-24'),post('2','2026-11-23'),post('3','2026-09-29')]
+        for r,display in zip(rows,['2026-11-24 00:00:00','2026-11-23 10:00:00','2026-09-30 00:00:00']):r['post_display_time']=display
+        result=u.forum_day(lambda _:json.dumps({'rc':1,'re':rows}),'300750','2026-11-23')
+        self.assertEqual([r['id'] for r in result],['2']);self.assertEqual(result.coverage,'publication-boundary')
     def test_list_only_refresh_preserves_previous_body_and_marks_new_comments_partial(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);p=root/'prototype/dist/data/v08/forum.json';p.parent.mkdir(parents=True)
