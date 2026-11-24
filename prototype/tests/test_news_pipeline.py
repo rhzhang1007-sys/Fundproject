@@ -65,6 +65,22 @@ class NewsPipeline(unittest.TestCase):
     def test_partial_feed_never_reports_complete_run(self):
         self.assertTrue(d.partial_coverage({'coverage':{'sh':{'status':'partial-page-limit'}}}))
         self.assertFalse(d.partial_coverage({'status':'date-boundary'}))
+    def test_fund_announcement_fallback_keeps_explicit_fund_role_and_partial_scope(self):
+        row=dict(secCode='516160',announcementId='1',announcementTitle='基金费率调整',announcementTime=1795449600000,adjunctUrl='finalpage/2026-11-24/1.PDF')
+        def fetch(url,params=None):
+            return json.dumps(dict(ErrCode=1,Data=None) if 'eastmoney' in url else dict(totalAnnouncement=1,announcements=[row],hasMore=False))
+        events,check=n.collect_fund_announcements(fetch,self.index(),'2026-11-23','2026-11-24')
+        self.assertEqual(events[0]['entities'][0]['kind'],'fund');self.assertEqual(check['status'],'partial-source-fallback')
+    def test_all_forum_lists_are_saved_before_any_long_detail_request(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t);base=root/'prototype/dist';(base/'data/v07').mkdir(parents=True);(base/'data/v09').mkdir();(base/'index.html').write_text('')
+            (base/'data/v07/funds-l1.json').write_text('[]');(base/'data/v09/security-identities.json').write_text('{"stocks":[]}')
+            calls=[]
+            def run(*args,**kwargs):
+                if kwargs.get('collect'):calls.append((args[1]['objects'][0]['code'],args[1].get('forumDetails')))
+            cfg=dict(enabled=True,objects=[dict(kind='fund',code='516160',name='基金'),dict(kind='stock',code='000009',name='股票')],forumDaily={'enabled':True},forumDetails=True,newsSources={'fast-news':False,'fund-announcements':False,'company-announcements':False})
+            with patch.object(u,'forum_day',side_effect=lambda *a,**k:u.ForumDayRows()),patch.object(u,'run',side_effect=run):d.run(root,cfg,True,date(2026,11,25),lambda _:None)
+            self.assertEqual(calls,[('516160',False),('000009',False),('516160',True),('000009',True)])
     def test_one_failed_feed_preserves_prior_news_and_other_valid_updates(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);dest=root/'prototype/dist/data';(dest/'v07').mkdir(parents=True);(dest/'v09').mkdir()

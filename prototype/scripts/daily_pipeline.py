@@ -70,7 +70,9 @@ def run(root,config,collect=False,as_of=None,fetch=None):
     if status['sources'] and not fatal:
         u.run(root,config,incoming=prepare_events(incoming),as_of=day)
         previous=u.load(dest/'v07/events.json',{'events':[]})
-        previous.update(builtAt=now,lastCheckedAt=now,windowDays=config.get('windowDays',30),
+        previous.pop('statusNote',None);previous.pop('entities',None)
+        checked_at=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
+        previous.update(builtAt=checked_at,lastCheckedAt=checked_at,windowDays=config.get('windowDays',30),
             sourceChecks=status['sources'],status='source-bounded',objectScope=dict(stocks=sum(k[0]=='stock' for k in index.entities),funds=sum(k[0]=='fund' for k in index.entities)),
             coverageNote='来源分页窗口内已取得事件；不是全市场零遗漏声明')
         u.write_json(dest/'v07/events.json',previous);status['newsReady']=True
@@ -95,7 +97,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
                 status['errors'].append(dict(task='index-valuations',reason=str(exc)));fatal=True
             except (ValueError,RuntimeError,TimeoutError,OSError,ImportError) as exc:status['errors'].append(dict(task='index-valuations',reason=str(exc)))
         if status['marketReady']:
-            snapshot.update(updatedAt=now,targetDay=end);u.write_json(dest/'v09/market-daily.json',snapshot)
+            snapshot.update(updatedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),targetDay=end);u.write_json(dest/'v09/market-daily.json',snapshot)
             # Archive by the source's actual trading date, never the job's calendar date.
             # Browser startup still loads only the current snapshot.
             by_day={}
@@ -107,23 +109,42 @@ def run(root,config,collect=False,as_of=None,fetch=None):
     # identity registry, while complete all-market forum crawling would require a separate budget.
     if config.get('forumDaily',{}).get('enabled') and not fatal:
         cap=int(config.get('forumDaily',{}).get('maxObjects',119));targets=(config.get('objects') or [])[:cap]
-        successes=0
+        successes=0;listed={}
+        # Finish verified publication-day lists for every target before downloading
+        # lengthy threads, so one busy stock cannot starve all later identities.
         for obj in targets:
+            oid=obj['kind']+obj['code'];code=('of' if obj['kind']=='fund' else '')+obj['code']
             try:
-                subset={**config,'objects':[obj],'sources':{'forumLists':True},'llmClaims':config.get('llmClaims',False)}
-                # Reuse the same paced/refusal-aware network transport, not a second throttle.
-                u.run(root,subset,collect=True,as_of=day,fetcher=fetch)
-                successes+=1
-                progress('forum',objectId=obj['kind']+obj['code'],completed=successes,targets=len(targets))
+                rows=u.forum_day(fetch,code,end,int(config.get('maxPostsPerObject',0)),int(config.get('maxForumPages',200)),day.isoformat())
+                listed[oid]=rows
+                subset={**config,'objects':[obj],'sources':{'forumLists':True},'forumDetails':False,'llmClaims':False}
+                u.run(root,subset,collect=True,as_of=day,fetcher=fetch,forum_observations={oid:rows})
+                progress('forum-list',objectId=oid,posts=len(rows),completed=len(listed),targets=len(targets))
             except u.SourceRefused as exc:
-                status['errors'].append(dict(task='forum',objectId=obj['kind']+obj['code'],reason=str(exc)));fatal=True;break
+                status['errors'].append(dict(task='forum-list',objectId=oid,reason=str(exc)));fatal=True;break
             except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
-                status['errors'].append(dict(task='forum',objectId=obj['kind']+obj['code'],reason=str(exc)))
+                status['errors'].append(dict(task='forum-list',objectId=oid,reason=str(exc)))
                 if isinstance(exc,TimeoutError):break
-        status['forumReady']=successes==len(targets);status['forumScope']=dict(targets=len(targets),successful=successes,allMarket=False)
+        ordered=sorted((obj for obj in targets if obj['kind']+obj['code'] in listed),key=lambda obj:(obj['kind']!='fund',len(listed[obj['kind']+obj['code']])))
+        if not fatal:
+            for obj in ordered:
+                oid=obj['kind']+obj['code']
+                try:
+                    subset={**config,'objects':[obj],'sources':{'forumLists':True},'llmClaims':config.get('llmClaims',False)}
+                    u.run(root,subset,collect=True,as_of=day,fetcher=fetch,forum_observations={oid:listed[oid]})
+                    successes+=1
+                    progress('forum-details',objectId=oid,completed=successes,targets=len(targets))
+                except u.SourceRefused as exc:
+                    status['errors'].append(dict(task='forum-details',objectId=oid,reason=str(exc)));fatal=True;break
+                except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
+                    status['errors'].append(dict(task='forum-details',objectId=oid,reason=str(exc)))
+                    if isinstance(exc,TimeoutError):break
+        status['forumReady']=successes==len(targets)
+        status['forumScope']=dict(targets=len(targets),listed=len(listed),detailed=successes,successful=successes,allMarket=False)
     status['incompleteSources']=[name for name,check in status['sources'].items() if partial_coverage(check)]
     status['status']='success' if status['newsReady'] and not status['errors'] and not status['incompleteSources'] else 'partial' if status['newsReady'] or status['marketReady'] else 'failed'
     status['networkRequests']=getattr(fetch,'calls',None)
+    status['finishedAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
     u.write_json(dest/'v09/update-status.json',status)
     progress('complete',status=status['status'],newsReady=status['newsReady'],marketReady=status['marketReady'],forumReady=status['forumReady'])
     return status

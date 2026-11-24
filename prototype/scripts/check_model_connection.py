@@ -18,7 +18,7 @@ def run(root=u.ROOT):
         parsed=u.parse_json_loose(raw);ok=isinstance(parsed,dict) and parsed.get('ok') is True
         reason='validated-json-response' if ok else u.LLM_STATE.get('lastSkip') or 'unexpected-response'
     elif url:reason='missing-price'
-    result=dict(requestId=request,checkedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),ok=ok,reason=reason,latencySeconds=round(time.monotonic()-started,2),pricingSource=u.pricing_details()['source'],scope='interface-check-only; no business material; semantic quality not assessed')
+    result=dict(requestId=request,checkedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),ok=ok,reason=reason,error=u.LLM_STATE.get('lastError') if not ok else None,latencySeconds=round(time.monotonic()-started,2),pricingSource=u.pricing_details()['source'],expectedModel=model.lower() in ('glm-5.3-flashx','glm-5.3-flash') if model else False,scope='interface-check-only; no business material; semantic quality not assessed')
     u.write_json(data/'v09/model-check.json',result);u.persist_usage()
     u.write_json(data/'v08/llm-usage.json',u.LLM_STATE)
     return result

@@ -126,8 +126,23 @@ class Regressions(unittest.TestCase):
         b=dict(id='b',entityCode='002594',title='标题一的转载',date='2026-11-23',url='https://example.com/read?id=1')
         active,_=u.merge_events([a],[b],date(2026,11,24));self.assertEqual(len(active),1)
         self.assertEqual(active[0]['entityCodes'],['002594','300750'])
-    def test_last_activity_boundary_handles_publish_time_out_of_order(self):
+    def test_publication_order_ignores_last_reply_time(self):
         rows=[post('1','2026-11-24'),post('2','2026-11-23'),post('3','2026-11-23'),post('4','2026-11-22')]
         for r,at in zip(rows,['2026-11-24 12:00:00','2026-11-24 10:00:00','2026-11-23 12:00:00','2026-11-22 12:00:00']):r['post_last_time']=at
         result=u.forum_day(lambda _:json.dumps({'rc':1,'re':rows}),'300750','2026-11-23')
-        self.assertEqual([r['id'] for r in result],['2','3']);self.assertEqual(result.coverage,'last-activity-boundary')
+        self.assertEqual([r['id'] for r in result],['2','3']);self.assertEqual(result.coverage,'publication-boundary')
+    def test_latest_publication_mode_does_not_scan_years_of_reply_history(self):
+        urls=[];rows=[post('1','2026-11-24'),post('2','2026-11-23'),post('3','2026-11-22')]
+        for r in rows:r['post_display_time']=r['post_publish_time'];r['post_last_time']='2026-11-24 22:00:00'
+        def fetch(url):urls.append(url);return json.dumps({'rc':1,'re':rows})
+        result=u.forum_day(fetch,'300750','2026-11-23')
+        self.assertEqual(len(urls),1);self.assertIn('sorttype=0',urls[0]);self.assertEqual([x['id'] for x in result],['2'])
+    def test_list_only_refresh_preserves_previous_body_and_marks_new_comments_partial(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t);p=root/'prototype/dist/data/v08/forum.json';p.parent.mkdir(parents=True)
+            prior={**row(),'date':'2026-11-23','observedAt':'2026-11-24','coverage':{'body':'complete','comments':'complete'}}
+            p.write_text(json.dumps({'records':[prior],'metrics':[]}))
+            listing=u.ForumDayRows([{k:v for k,v in prior.items() if k not in ('content','comments','coverage')}]);listing[0]['commentCount']=2
+            cfg=dict(enabled=True,objects=[dict(kind='stock',code='300750',name='宁德时代')],sources={'forumLists':True},forumDetails=False)
+            u.run(root,cfg,True,as_of=date(2026,11,24),fetcher=lambda _:self.fail('No re-fetch'),forum_observations={'stock300750':listing})
+            saved=json.loads(p.read_text())['records'][0];self.assertEqual(saved['content'],prior['content']);self.assertEqual(saved['coverage']['comments'],'partial')

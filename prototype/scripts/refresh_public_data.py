@@ -112,7 +112,7 @@ class SourceRefused(RuntimeError):
 
 def _forum_payload(fetch, code, page, size=50):
     url = ('https://gbapi.eastmoney.com/webarticlelist/api/Article/Articlelist?' +
-           urlencode(dict(code=code, type=0, ps=size, p=page, sorttype=1, plat='web',
+           urlencode(dict(code=code, type=0, ps=size, p=page, sorttype=0, plat='web',
                           product='Guba', version=200, deviceid='fundproject')))
     data = json.loads(fetch(url))
     if not isinstance(data, dict) or not isinstance(data.get('re'), list):
@@ -132,7 +132,7 @@ def _forum_row(x, code, observed):
     count = lambda k: x.get(k) if type(x.get(k)) is int and x[k] >= 0 else None
     return dict(id=pid, objectId=('fund'+code[2:] if code.startswith('of') else 'stock'+code),
                 title=title, url=f'https://guba.eastmoney.com/news,{code},{pid}.html',
-                date=published, publishedAt=x.get('post_publish_time'), observedAt=observed,
+                date=published, publishedAt=x.get('post_publish_time'), displayedAt=x.get('post_display_time'), observedAt=observed,
                 lastSeenAt=observed, readCount=count('post_click_count'),
                 commentCount=count('post_comment_count'), source='东方财富股吧', claim='')
 
@@ -147,11 +147,10 @@ class ForumDayRows(list):
 
 
 def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
-    """Exhaust the paginated list, then select publication day in Shanghai.
+    """Official sorttype=0 is 最新发帖; verify its display/publication boundary.
 
-    The live API sorts by last activity, NOT publication time. Only a monotone
-    non-pinned activity boundary can end the scan early. Missing/unordered activity
-    requires exhaustion; safety bounds never turn a partial scan into a complete day.
+    Last-reply ordering can reorder old threads across pages and must not be used
+    to conclude a publication-day sample is complete.
     """
     datetime.strptime(target, '%Y-%m-%d')
     rows, seen, page_signatures = ForumDayRows(), set(), set()
@@ -167,7 +166,7 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
         activities=[]
         for x in posts:
             if x.get('post_top_status') not in (None,0): continue
-            at=x.get('post_last_time'); published=x.get('post_publish_time')
+            at=x.get('post_display_time') or x.get('post_publish_time'); published=x.get('post_publish_time')
             try:
                 stamp=datetime.strptime(at,'%Y-%m-%d %H:%M:%S')
                 pub=datetime.strptime(published,'%Y-%m-%d %H:%M:%S')
@@ -182,7 +181,7 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
             if max_posts and len(rows) > max_posts:
                 raise IncompleteSource('Daily post safety limit exceeded')
         if activity_ordered and activities and activities[-1].date().isoformat()<target:
-            rows.coverage='last-activity-boundary'; return rows
+            rows.coverage='publication-boundary'; return rows
     raise IncompleteSource('Forum page safety limit reached; daily coverage unproven')
 
 
@@ -296,7 +295,7 @@ def match_entities(text, entities):
 def llm_config():
     values=tuple(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL'))
     if not all(values):return (None,None,None)
-    url,key,model=values;p=urlparse(url.strip())
+    url,key,model=values;url=url.strip().strip('`\"\'');model=model.strip().strip('`\"\'');p=urlparse(url)
     # This gateway documents an OpenAI-compatible /v1/chat/completions endpoint.
     if p.hostname=='api.zhizengzeng.com' and p.path.rstrip('/') in ('','/v1') and not p.query and not p.fragment:
         url='https://api.zhizengzeng.com/v1/chat/completions'
@@ -419,8 +418,20 @@ def _post_llm(url, key, model, messages, max_tokens):
         if data.get('choices',[{}])[0].get('finish_reason')=='length':
             LLM_STATE['lastSkip']='output-truncated';return None
         return data['choices'][0]['message']['content']
-    except (OSError,ValueError,KeyError,TypeError,IndexError):
-        LLM_STATE['unknownUsageCalls']+=1; LLM_STATE['lastSkip']='model-error'; return None
+    except HTTPError as exc:
+        # Classify the provider's error without logging its message or any Secret.
+        try:
+            error=json.loads(exc.read(16000));error=error.get('error',error);message=str(error).lower()
+        except (ValueError,OSError):message=''
+        category=('model-unavailable' if re.search(r'model.*(?:not|unavailable|invalid)|模型.*(?:不存在|不支持)',message) else
+                  'authentication' if exc.code in (401,403) or re.search(r'api.?key|authentication|密钥|认证',message) else
+                  'balance-or-quota' if re.search(r'quota|balance|余额|欠费',message) else
+                  'request-parameter' if re.search(r'temperature|max_tokens|response_format|参数',message) else 'upstream-request-rejected')
+        LLM_STATE['unknownUsageCalls']+=1;LLM_STATE['lastSkip']='model-http-'+str(exc.code)
+        LLM_STATE['lastError']=dict(status=exc.code,category=category);return None
+    except (OSError,ValueError,KeyError,TypeError,IndexError) as exc:
+        LLM_STATE['unknownUsageCalls']+=1; LLM_STATE['lastSkip']='model-error'
+        LLM_STATE['lastError']=dict(category='transport-or-response',errorType=type(exc).__name__);return None
     finally: persist_usage()
 
 
@@ -644,7 +655,7 @@ def write_review(root, day, claims_by_object, rows_by_object, sample=5):
     if not path.exists(): path.write_text(body,encoding='utf-8')
 
 
-def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None):
+def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None,forum_observations=None):
     day=as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date()
     now=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
     dist=root/'prototype/dist/data'; target=(day-timedelta(days=1)).isoformat()
@@ -669,8 +680,9 @@ def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None):
                 except (ValueError,RuntimeError) as exc: errors.append(oid+':announcements:'+str(exc))
             if sources.get('forumLists'):
                 code=('of' if obj['kind']=='fund' else '')+obj['code']
-                rows=forum_day(fetch,code,target,int(config.get('maxPostsPerObject',0)),
-                    int(config.get('maxForumPages',200)),day.isoformat())
+                rows=(forum_observations or {}).get(oid)
+                if rows is None:rows=forum_day(fetch,code,target,int(config.get('maxPostsPerObject',0)),int(config.get('maxForumPages',200)),day.isoformat())
+                elif not isinstance(rows,ForumDayRows) or any(r['objectId']!=oid or r['date']!=target for r in rows):raise ValueError('Forum observations do not match the verified object/day')
                 if config.get('forumDetails'): fetch_details(code,rows,fetch=fetch)
                 observations[oid]=rows
                 checks[oid+':forum']=dict(checkedAt=now,publicationDay=target,status=getattr(rows,'coverage','list-exhausted'),
@@ -718,16 +730,19 @@ def run(root,config,collect=False,incoming=None,as_of=None,fetcher=None):
         for rows in observations.values():
             for r in rows:
                 key=(r['objectId'],canonical_url(r['url']));old=unique.get(key)
-                unique[key]={**r,'observedAt':old['observedAt'] if old else r['observedAt']}
+                combined={**old,**r} if old and 'coverage' not in r else dict(r)
+                if old and 'coverage' not in r and combined.get('coverage') and r.get('commentCount')!=len(combined.get('comments',[])):
+                    combined['coverage']={**combined['coverage'],'comments':'partial' if combined.get('comments') else 'unknown','reportedComments':r.get('commentCount')}
+                unique[key]={**combined,'observedAt':old['observedAt'] if old else r['observedAt']}
         metrics={(x['objectId'],x['date']):x for x in forum.get('metrics',[])}
         for oid,rows in observations.items():
             def total(field):
                 values=[r.get(field) for r in rows]
                 return sum(values) if all(type(x) is int for x in values) else None
             count=len(rows); reads=total('readCount'); comments=total('commentCount')
-            history=sorted([x for x in metrics.values() if x['objectId']==oid and x['date']<target and x.get('coverage') in ('list-exhausted','last-activity-boundary')],key=lambda x:x['date'])[-20:]
+            history=sorted([x for x in metrics.values() if x['objectId']==oid and x['date']<target and x.get('coverage') in ('list-exhausted','last-activity-boundary','publication-boundary')],key=lambda x:x['date'])[-20:]
             prev=metrics.get((oid,(day-timedelta(days=2)).isoformat()))
-            previous_count=prev.get('sampledPosts') if prev and prev.get('coverage') in ('list-exhausted','last-activity-boundary') else None
+            previous_count=prev.get('sampledPosts') if prev and prev.get('coverage') in ('list-exhausted','last-activity-boundary','publication-boundary') else None
             z=None
             if len(history)==20:
                 mean=sum(x['sampledPosts'] for x in history)/20
