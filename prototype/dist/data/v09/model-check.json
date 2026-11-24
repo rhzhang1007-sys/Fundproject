@@ -1,9 +1,14 @@
 {
-  "requestId": "2026-11-24-first-connection",
-  "checkedAt": "2026-11-24T19:25:12+08:00",
+  "requestId": "2026-11-24-config-diagnosis-2",
+  "checkedAt": "2026-11-24T19:34:57+08:00",
   "ok": false,
-  "reason": "model-error",
-  "latencySeconds": 6.3,
+  "reason": "model-http-503",
+  "error": {
+    "status": 503,
+    "category": "upstream-request-rejected"
+  },
+  "latencySeconds": 6.18,
   "pricingSource": "configured-variables",
+  "expectedModel": false,
   "scope": "interface-check-only; no business material; semantic quality not assessed"
 }
