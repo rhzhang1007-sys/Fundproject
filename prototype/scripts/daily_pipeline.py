@@ -23,6 +23,10 @@ def partial_coverage(value):
     if isinstance(value,list):return any(partial_coverage(v) for v in value)
     return False
 
+def progress(stage,**fields):
+    # No API URL, credentials or source body text in operational logs.
+    print(json.dumps(dict(stage=stage,at=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),**fields),ensure_ascii=False),flush=True)
+
 def preflight(root,config):
     required=['prototype/dist/index.html','prototype/dist/data/v07/funds-l1.json','prototype/dist/data/v09/security-identities.json']
     missing=[name for name in required if not (root/name).is_file()]
@@ -44,6 +48,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
     u.LLM_DEADLINE=getattr(fetch,'deadline',None)
     index=EntityIndex(runtime_entities(root));status=dict(schemaVersion=1,attemptedAt=now,targetDay=end,newsReady=False,marketReady=False,forumReady=False,sources={},errors=[],model=checks)
     start=(day-timedelta(days=int(config.get('catchUpDays',2)))).isoformat()
+    progress('start',targetDay=end,windowStart=start,modelConfigured=checks['modelConfigured'],modelPricesConfigured=checks['modelPricesConfigured'])
     incoming=[];fatal=False
     # Each feed is bulk/paginated, not one search for every fund or stock.
     feeds=[('fast-news',collect_fast,int(config.get('maxFastNewsPages',80))),
@@ -54,10 +59,12 @@ def run(root,config,collect=False,as_of=None,fetch=None):
         try:
             events,coverage=collector(fetch,index,start,end,pages)
             incoming.extend(events);status['sources'][name]=dict(coverage=coverage,start=start,end=end,eventRows=len(events))
+            progress(name,eventRows=len(events),coverage=coverage)
         except u.SourceRefused as exc:
             status['errors'].append(dict(task=name,reason=str(exc)));fatal=True;break
         except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
             status['errors'].append(dict(task=name,reason=str(exc)))
+            progress(name,status='failed',reason=str(exc))
     # Preserve old data on source failure. A successful feed containing no relevant hits is valid.
     if status['sources'] and not fatal:
         u.run(root,config,incoming=prepare_events(incoming),as_of=day)
@@ -66,6 +73,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
             sourceChecks=status['sources'],status='source-bounded',objectScope=dict(stocks=sum(k[0]=='stock' for k in index.entities),funds=sum(k[0]=='fund' for k in index.entities)),
             coverageNote='来源分页窗口内已取得事件；不是全市场零遗漏声明')
         u.write_json(dest/'v07/events.json',previous);status['newsReady']=True
+        progress('news-saved',activeEvents=len(previous['events']))
     if config.get('marketDaily',{}).get('enabled') and not fatal:
         market=config['marketDaily'];snapshot=u.load(dest/'v09/market-daily.json',{'boards':[],'valuations':[]})
         try:
@@ -87,6 +95,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
             except (ValueError,RuntimeError,TimeoutError,OSError,ImportError) as exc:status['errors'].append(dict(task='index-valuations',reason=str(exc)))
         if status['marketReady']:
             snapshot.update(updatedAt=now,targetDay=end);u.write_json(dest/'v09/market-daily.json',snapshot)
+        progress('market',ready=status['marketReady'])
     # The existing 119 forum targets are a separate scope. Source-first news covers the whole
     # identity registry, while complete all-market forum crawling would require a separate budget.
     if config.get('forumDaily',{}).get('enabled') and not fatal:
@@ -98,6 +107,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
                 # Reuse the same paced/refusal-aware network transport, not a second throttle.
                 u.run(root,subset,collect=True,as_of=day,fetcher=fetch)
                 successes+=1
+                progress('forum',objectId=obj['kind']+obj['code'],completed=successes,targets=len(targets))
             except u.SourceRefused as exc:
                 status['errors'].append(dict(task='forum',objectId=obj['kind']+obj['code'],reason=str(exc)));fatal=True;break
             except (ValueError,RuntimeError,TimeoutError,OSError) as exc:
@@ -108,6 +118,7 @@ def run(root,config,collect=False,as_of=None,fetch=None):
     status['status']='success' if status['newsReady'] and not status['errors'] and not status['incompleteSources'] else 'partial' if status['newsReady'] or status['marketReady'] else 'failed'
     status['networkRequests']=getattr(fetch,'calls',None)
     u.write_json(dest/'v09/update-status.json',status)
+    progress('complete',status=status['status'],newsReady=status['newsReady'],marketReady=status['marketReady'],forumReady=status['forumReady'])
     return status
 
 
