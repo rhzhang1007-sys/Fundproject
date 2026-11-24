@@ -1,1 +1,1 @@
-{"requestId": "2026-11-24-visible-flashx-model-4", "expectedHost": "api.zhizengzeng.com", "expectedModels": ["glm-5.3-flashx"], "purpose": "one connection check with the user-selected visible model configuration"}
+{"requestId": "2026-11-24-minimal-standard-endpoint-5", "expectedHost": "api.zhizengzeng.com", "expectedModels": ["glm-5.3-flashx"], "compareFlash": true, "purpose": "minimal request and at most one advertised alternative; same daily budget; production selection unchanged"}

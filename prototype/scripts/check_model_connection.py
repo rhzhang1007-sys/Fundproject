@@ -26,7 +26,7 @@ def run(root=u.ROOT):
     if prior.get('requestId')==request and prior.get('ok') is True and os.environ.get('GITHUB_EVENT_NAME')!='workflow_dispatch':return prior
     url,key,model=u.llm_config();u.init_llm(data/'v08/llm-usage'/f'{day}.json',day)
     u.MODEL_CIRCUIT_ERROR=None
-    started=time.monotonic();ok=False;reason='missing-model';directory=None
+    started=time.monotonic();ok=False;reason='missing-model';directory=None;comparison=None;primary_error=None
     matches_model=not settings.get('expectedModels') or model and model.lower() in settings['expectedModels']
     matches_host=not settings.get('expectedHost') or url and urlparse(url).hostname==settings['expectedHost']
     if not matches_model:reason='configuration-model-name-mismatch'
@@ -38,8 +38,16 @@ def run(root=u.ROOT):
             raw=u._post_llm(url,key,model,[dict(role='system',content='这是接口连通检查。仅返回JSON对象，不附加说明。'),dict(role='user',content='请返回 {"ok":true}。')],8192 if model.lower().startswith('glm-5.3') else 600)
             parsed=u.parse_json_loose(raw);ok=isinstance(parsed,dict) and parsed.get('ok') is True
             reason='validated-json-response' if ok else u.LLM_STATE.get('lastSkip') or 'unexpected-response'
+            primary_error=dict(u.LLM_STATE.get('lastError') or {}) if not ok else None
+            if not ok and primary_error.get('status') in (502,503,504) and settings.get('compareFlash') and 'glm-5.3-flash' in directory.get('listedKnownVariants',[]):
+                # One explicitly bounded diagnostic comparison, with the same material
+                # and ledger. This does not change the selected production model.
+                u.MODEL_CIRCUIT_ERROR=None;compare_start=time.monotonic()
+                other=u._post_llm(url,key,'glm-5.3-flash',[dict(role='system',content='这是接口连通检查。仅返回JSON对象，不附加说明。'),dict(role='user',content='请返回 {"ok":true}。')],8192)
+                result=u.parse_json_loose(other)
+                comparison=dict(model='glm-5.3-flash',ok=isinstance(result,dict) and result.get('ok') is True,error=u.LLM_STATE.get('lastError'),latencySeconds=round(time.monotonic()-compare_start,2),budgetBasis='same conservative 2/7 reference; not an invoice')
     elif url:reason='missing-price'
-    result=dict(requestId=request,checkedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),ok=ok,reason=reason,error=u.LLM_STATE.get('lastError') if not ok else None,directory=directory,latencySeconds=round(time.monotonic()-started,2),pricingSource=u.pricing_details()['source'],expectedModel=bool(matches_model),expectedProvider=bool(matches_host),scope='interface-check-only; no business material; semantic quality not assessed')
+    result=dict(requestId=request,checkedAt=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),ok=ok,reason=reason,error=primary_error,directory=directory,comparison=comparison,latencySeconds=round(time.monotonic()-started,2),pricingSource=u.pricing_details()['source'],expectedModel=bool(matches_model),expectedProvider=bool(matches_host),scope='interface-check-only; no business material; semantic quality not assessed')
     u.write_json(data/'v09/model-check.json',result);u.persist_usage()
     u.write_json(data/'v08/llm-usage.json',u.LLM_STATE)
     return result

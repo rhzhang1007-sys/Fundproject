@@ -305,7 +305,7 @@ def llm_config():
         return value.strip().strip('`\"\'“”‘’')
     url=clean(url,'LLM_API_URL');model=clean(model,'LLM_MODEL');model=re.sub(r'[‐‑‒–—−]','-',model);p=urlparse(url)
     # This gateway documents an OpenAI-compatible /v1/chat/completions endpoint.
-    if p.hostname=='api.zhizengzeng.com' and p.path.rstrip('/') in ('','/v1') and not p.query and not p.fragment:
+    if p.hostname=='api.zhizengzeng.com' and not p.username and not p.password and not p.query and not p.fragment:
         url='https://api.zhizengzeng.com/v1/chat/completions'
     return url,key,model.strip()
 
@@ -416,7 +416,7 @@ def _post_llm(url, key, model, messages, max_tokens):
     # Journal before the paid request. Interrupted/failed calls keep the reservation on rerun.
     persist_usage()
     options=dict(model=model,temperature=1 if model.lower().startswith('glm-5.3') else 0,max_tokens=max_tokens,messages=messages)
-    if model.lower().startswith('glm-5.3'):options['response_format']={'type':'json_object'}
+    # Keep the gateway request minimal. JSON is still enforced by prompt + validator.
     body=json.dumps(options).encode()
     req=Request(url,data=body,headers={'Content-Type':'application/json','Authorization':'Bearer '+key})
     try:
@@ -434,14 +434,24 @@ def _post_llm(url, key, model, messages, max_tokens):
     except HTTPError as exc:
         # Classify the provider's error without logging its message or any Secret.
         try:
-            error=json.loads(exc.read(16000));error=error.get('error',error);message=str(error).lower()
-        except (ValueError,OSError):message=''
+            raw_error=exc.read(16000).decode('utf-8',errors='replace')
+            try:
+                error=json.loads(raw_error);error=error.get('error',error);summary=str(error.get('message') or error.get('msg') or '') if isinstance(error,dict) else str(error) if isinstance(error,str) else ''
+            except ValueError:
+                title=re.search(r'<title[^>]*>(.*?)</title>',raw_error,re.I|re.S);summary=re.sub('<[^>]+>',' ',title.group(1)) if title else ''
+            message=summary.lower()
+            for private in [key,key[:8] if len(key)>16 else '',key[-8:] if len(key)>16 else '']:
+                if private:summary=summary.replace(private,'[redacted]')
+            summary=re.sub(r'(?i)(?:sk-|ak-|bearer\s+)[a-z0-9_./+=-]+','[redacted]',summary)
+            summary=re.sub(r'[a-zA-Z0-9_=-]{24,}','[id-redacted]',summary)
+        except (ValueError,OSError):message='';summary=''
         category=('model-unavailable' if re.search(r'model.*(?:not|unavailable|invalid)|模型.*(?:不存在|不支持)',message) else
                   'authentication' if exc.code in (401,403) or re.search(r'api.?key|authentication|密钥|认证',message) else
                   'balance-or-quota' if re.search(r'quota|balance|余额|欠费',message) else
-                  'request-parameter' if re.search(r'temperature|max_tokens|response_format|参数',message) else 'upstream-request-rejected')
+                  'request-parameter' if re.search(r'temperature|max_tokens|response_format|参数',message) else
+                  'upstream-routing' if re.search(r'no available|no channel|无可用|渠道|线路',message) else 'upstream-request-rejected')
         LLM_STATE['unknownUsageCalls']+=1;LLM_STATE['lastSkip']='model-http-'+str(exc.code)
-        LLM_STATE['lastError']=dict(status=exc.code,category=category);return None
+        LLM_STATE['lastError']=dict(status=exc.code,category=category,summary=summary[:240],contentType=exc.headers.get('Content-Type','') if exc.headers else '');return None
     except (OSError,ValueError,KeyError,TypeError,IndexError) as exc:
         LLM_STATE['unknownUsageCalls']+=1; LLM_STATE['lastSkip']='model-error'
         LLM_STATE['lastError']=dict(category='transport-or-response',errorType=type(exc).__name__);return None

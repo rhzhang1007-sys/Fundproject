@@ -41,7 +41,7 @@ jobs:
         run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
       - name: Check runtime configuration without collecting
         env:
-          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: glm-5.3-flashx
           LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
@@ -60,7 +60,7 @@ jobs:
         id: collect
         if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
         env:
-          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: glm-5.3-flashx
           LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
