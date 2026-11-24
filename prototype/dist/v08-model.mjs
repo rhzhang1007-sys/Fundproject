@@ -38,11 +38,13 @@ export function graphSubset(model,focus='portfolio') {
 }
 export function eventSelection(events,model,mode,id,now,older=false) {
   const end=String(now).slice(0,10),start=new Date(Date.parse(end+'T00:00:00Z')-29*86400000).toISOString().slice(0,10);
-  const f=model.funds.find(f=>f.id===id),codes=mode==='fund'?new Set([f?.code,...(f?.holdings.map(x=>x.code)||[])]):new Set([String(id||'').replace(/^stock/,'')]);
+  const f=model.funds.find(f=>f.id===id),stockCodes=new Set(f?.holdings.map(x=>x.code)||[]),companyCode=String(id||'').replace(/^stock/,'');
   if(mode==='fund'&&!f)return [];
   return events.filter(e=>{
     const entities=e.entities?.length?e.entities: (e.entityCodes||[e.entityCode]).map(code=>({code,kind:null}));
-    const match=entities.some(t=>codes.has(t.code)&&(mode==='fund'||t.kind!=='fund'));
+    const match=entities.some(t=>mode==='fund'?
+      (t.kind==='fund'?t.code===f.code:t.kind!=='market'&&stockCodes.has(t.code)):
+      t.code===companyCode&&t.kind!=='fund'&&t.kind!=='market');
     return match&&e.date<=end&&(older||e.date>=start);
   }).sort((a,b)=>b.date.localeCompare(a.date));
 }

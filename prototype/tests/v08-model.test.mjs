@@ -28,3 +28,10 @@ test('基金自身公告、多股票标签和基金代码角色分别处理',()=
  assert.equal(eventSelection(es,m,'company','stock516160','2026-11-24').length,0);
  assert.equal(eventSelection(es,m,'fund','fund-missing','2026-11-24').length,0);
 });
+test('同代码基金与股票的时间轴不会串对象',()=>{
+ const m=holdingsModel({items:[{code:'000001',name:'华夏成长混合',amount:1}]},p.funds);
+ const es=[{id:'fund',entities:[{kind:'fund',code:'000001'}],date:'2026-11-24'},
+ {id:'stock',entities:[{kind:'stock',code:'000001'}],date:'2026-11-24'}];
+ assert.deepEqual(eventSelection(es,m,'fund','fund000001','2026-11-24').map(x=>x.id),['fund']);
+ assert.deepEqual(eventSelection(es,m,'company','stock000001','2026-11-24').map(x=>x.id),['stock']);
+});
