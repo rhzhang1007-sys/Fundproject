@@ -25,7 +25,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     project = Path(__file__).resolve().parents[1]
     if not args.team_hub and not args.static_only:
-        candidates=sorted((project/'tmp/runtime-node22').glob('node-v22.*/bin/node'))
+        candidates=[project/'prototype/.runtime/node22/node'] if (project/'prototype/.runtime/node22/node').exists() else sorted((project/'tmp/runtime-node22').glob('node-v22.*/bin/node'))
         node=str(candidates[-1]) if candidates else shutil.which('node')
         if node:
             env={**os.environ,'PORT':str(args.port)}
