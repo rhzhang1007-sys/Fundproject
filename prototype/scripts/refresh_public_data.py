@@ -450,6 +450,11 @@ def _post_llm(url, key, model, messages, max_tokens):
                   'balance-or-quota' if re.search(r'quota|balance|余额|欠费',message) else
                   'request-parameter' if re.search(r'temperature|max_tokens|response_format|参数',message) else
                   'upstream-routing' if re.search(r'no available|no channel|无可用|渠道|线路',message) else 'upstream-request-rejected')
+        # Public run reports must not publish arbitrary account/balance text.
+        safe_summaries={'model-unavailable':'Requested model unavailable','authentication':'Authentication or access rejected',
+                        'balance-or-quota':'Balance or quota issue','request-parameter':'Request parameter rejected',
+                        'upstream-routing':'No usable upstream route','upstream-request-rejected':'request failed'}
+        summary=safe_summaries[category]
         LLM_STATE['unknownUsageCalls']+=1;LLM_STATE['lastSkip']='model-http-'+str(exc.code)
         LLM_STATE['lastError']=dict(status=exc.code,category=category,summary=summary[:240],contentType=exc.headers.get('Content-Type','') if exc.headers else '');return None
     except (OSError,ValueError,KeyError,TypeError,IndexError) as exc:
