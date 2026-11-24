@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "date": "2026-11-24",
-  "calls": 0,
+  "calls": 1,
   "promptTokens": 0,
   "completionTokens": 0,
   "costCNY": 0.0,
-  "reservedCNY": 0.0,
-  "unknownUsageCalls": 0,
+  "reservedCNY": 0.012714,
+  "unknownUsageCalls": 1,
   "stoppedByBudget": false,
   "skipped": [
     {
@@ -66,10 +66,17 @@
   ],
   "budgetCNY": 5.0,
   "priceCNYPerMillion": {
-    "in": null,
-    "out": null
+    "in": 2.0,
+    "out": 7.0
   },
   "aggregatedObjects": [],
   "aggregated": 0,
-  "lastSkip": "missing-price"
+  "lastSkip": "model-error",
+  "pricing": {
+    "input": 2.0,
+    "output": 7.0,
+    "source": "configured-variables",
+    "basis": "configured-budget-reference"
+  },
+  "costIsEstimate": true
 }

@@ -1,0 +1,9 @@
+{
+  "requestId": "2026-11-24-first-connection",
+  "checkedAt": "2026-11-24T19:25:12+08:00",
+  "ok": false,
+  "reason": "model-error",
+  "latencySeconds": 6.3,
+  "pricingSource": "configured-variables",
+  "scope": "interface-check-only; no business material; semantic quality not assessed"
+}
