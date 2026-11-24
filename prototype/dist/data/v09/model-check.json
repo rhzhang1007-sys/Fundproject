@@ -1,14 +1,24 @@
 {
-  "requestId": "2026-11-24-config-diagnosis-2",
-  "checkedAt": "2026-11-24T19:34:57+08:00",
+  "requestId": "2026-11-24-visible-flashx-model-4",
+  "checkedAt": "2026-11-24T20:05:52+08:00",
   "ok": false,
-  "reason": "model-http-503",
+  "reason": "model-http-502",
   "error": {
-    "status": 503,
+    "status": 502,
     "category": "upstream-request-rejected"
   },
-  "latencySeconds": 6.18,
+  "directory": {
+    "httpStatus": 200,
+    "validSchema": true,
+    "desiredListed": true,
+    "listedKnownVariants": [
+      "glm-5.3-flashx",
+      "glm-5.3-flash"
+    ]
+  },
+  "latencySeconds": 3.63,
   "pricingSource": "configured-variables",
-  "expectedModel": false,
+  "expectedModel": true,
+  "expectedProvider": true,
   "scope": "interface-check-only; no business material; semantic quality not assessed"
 }
