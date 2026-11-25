@@ -66,7 +66,7 @@ def build(root=ROOT,package=None):
         cur=curated_s.get(code)
         if cur:card=merge_fields(card,{k:v for k,v in cur.items() if k not in ('kind','objectId','status')})
         card.update(id=identity['id'],kind='stock');groups[('stock',shard(code))].append(card)
-        aliases.append({**{k:s.get(k) for k in ['code','name','fullName','exchange','matchKeywords']},'kind':'stock'})
+        aliases.append({**{k:s.get(k) for k in ['code','name','fullName','exchange','matchKeywords','reviewKeywords']},'kind':'stock'})
     identities=[*funds.values(),*stock_identities]
     if len({x['id'] for x in identities})!=len(identities):raise ValueError('Duplicate public object identity')
     files={}

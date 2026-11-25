@@ -13,3 +13,11 @@ class ImportContracts(unittest.TestCase):
    with self.assertRaises(ValueError):f.confirm()
  def test_bad_source_weights_are_not_cast_to_zero(self):
   with self.assertRaises(ValueError):period_record('000001',{'asOf':'2026-06-30','rows':[{'code':'600001','name':'A','weight':None}]},None)
+
+class ReviewKeywordRules(unittest.TestCase):
+ def test_a_review_keyword_is_candidate_only_even_if_source_also_calls_it_match_keyword(self):
+  from public_news import EntityIndex
+  index=EntityIndex([{'kind':'stock','code':'000553','name':'安道麦A','matchKeywords':['安道麦A','安道麦'],'reviewKeywords':['安道麦']}])
+  tags,hints=index.tag('安道麦发布消息')
+  self.assertEqual(tags,[]);self.assertTrue(hints)
+  tags,hints=index.tag('安道麦发布消息',[('stock','000553')]);self.assertEqual(tags[0]['code'],'000553')

@@ -29,15 +29,17 @@ class EntityIndex:
     """Aho-Corasick names + a scoped exact-code dictionary. Conflicts remain candidates."""
     def __init__(self,entities):
         self.entities={(e.get('kind','stock'),e['code']):e for e in entities}
-        words=defaultdict(set)
+        words=defaultdict(set);self.review_only=defaultdict(set)
         for key,e in self.entities.items():
             names=e.get('matchKeywords')
             if names is None:names=[e.get('name'),e.get('fullName'),*e.get('aliases',[])]
-            for word in names:
+            review={norm(w) for w in e.get('reviewKeywords') or [] if isinstance(w,str)}
+            for word in [*names,*review]:
                 if isinstance(word,dict):continue
                 word=norm(word)
                 if len(word)<3 or word in GENERIC:continue
                 words[word].add(key)
+                if word in review:self.review_only[word].add(key)
         self.codes=defaultdict(list)
         for key in self.entities:self.codes[key[1]].append(key)
         self.words=words;self.next=[{}];self.fail=[0];self.outputs=[[]]
@@ -71,7 +73,7 @@ class EntityIndex:
         for a,b,word,keys in matches:
             if b<=farthest:continue
             farthest=max(farthest,b)
-            if len(keys)!=1:
+            if len(keys)!=1 or any(key in self.review_only[word] for key in keys):
                 hints.append(dict(text=word,candidates=[dict(kind=k,code=c) for k,c in sorted(keys)]));continue
             key=next(iter(keys));e=self.entities[key]
             out[key]=dict(kind=key[0],code=key[1],name=e.get('name') or key[1],basis='unambiguous-name',matchedText=word)
