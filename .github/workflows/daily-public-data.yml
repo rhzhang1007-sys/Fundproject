@@ -52,6 +52,7 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_daily_factors.py'
           python -m unittest discover -s prototype/tests -p 'test_index_observations.py'
           python -m unittest discover -s prototype/tests -p 'test_forum_sources.py'
+          python -m unittest discover -s prototype/tests -p 'test_holdings_shards.py'
       - name: Validate website data interfaces
         run: node --test prototype/tests/*.test.mjs
       - name: Check runtime configuration without collecting
