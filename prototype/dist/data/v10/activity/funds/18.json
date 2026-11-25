@@ -1,1 +1,1 @@
-{"schemaVersion":1,"objects":{}}
+{"schemaVersion":1,"objects":{"fund000118":{"news":[],"forum":{"records":[],"claims":[],"metrics":[{"objectId":"fund000118","date":"2026-11-24","sampledPosts":0,"readCount":0,"commentCount":0,"coverage":"publication-boundary","zScore":-0.5388159060803248,"countBasis":"publication-day-posts; observed cumulative engagement"}],"listCoverage":{"status":"source-window-complete","start":"2026-10-27","end":"2026-11-24","nextPage":2,"checkedAt":"2026-11-25T08:50:48+08:00"},"storedPostCount":9}}}}
