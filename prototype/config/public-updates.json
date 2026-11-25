@@ -10,12 +10,12 @@
     "news": true,
     "summaries": false
   },
-  "note": "全部已收录基金及股票共用同一身份目录；新闻走批量信源，论坛为可续跑全对象队列。只保留30天动态；范围、实际取得、正文/评论/聚合分别统计；待处理不当零内容。",
+  "note": "全部身份可查询；每天每对象最多30帖，正文与评论独立于模型采集，近30天保留；来源不足和待处理分别记录。",
   "forumCommentsPerPost": 0,
   "forumDetails": true,
   "forumWorkers": 1,
-  "maxPostsPerObject": 0,
-  "llmClaims": true,
+  "maxPostsPerObject": 30,
+  "llmClaims": false,
   "minPostsForClaims": 5,
   "publishEnabled": false,
   "maxForumPages": 200,
@@ -60,14 +60,16 @@
     "enabled": true,
     "mode": "global-queue",
     "batchSeconds": 900,
-    "listBatchSeconds": 600,
+    "listBatchSeconds": 300,
     "pagesPerVisit": 3,
-    "detailsPerVisit": 5,
-    "detailObjectsPerBatch": 30
+    "detailsPerVisit": 30,
+    "detailObjectsPerBatch": 34595,
+    "collectionDays": 1,
+    "commentPagesPerVisit": 3
   },
   "retentionMode": "rolling-30-days",
   "newsLLM": {
-    "enabled": true,
+    "enabled": false,
     "maxCallsPerBatch": 3,
     "maxRecordsPerBatch": 8
   }

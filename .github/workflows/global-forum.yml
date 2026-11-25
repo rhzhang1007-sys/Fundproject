@@ -88,7 +88,7 @@ jobs:
           import os,subprocess
           from pathlib import Path
           paths=['prototype/dist/data/v08/llm-usage.json']
-          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10','prototype/dist/data/v08/forum.json','prototype/dist/data/v11/forum-seed.json']
+          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10','prototype/dist/data/v08/forum.json','prototype/dist/data/v11/forum-seed.json','prototype/dist/data/v12/posts']
           else:paths+=['prototype/dist/data/v10/forum-batch-status.json']
           paths=[p for p in paths if Path(p).exists()]
           if paths:subprocess.run(['git','add','--',*paths],check=True)

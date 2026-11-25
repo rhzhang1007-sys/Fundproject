@@ -34,7 +34,7 @@ class GlobalTests(unittest.TestCase):
   state=json.loads((d/'v10/forum-state.json').read_text());self.assertEqual(state['objects']['fund000001']['scan']['page'],2);self.assertNotIn('throughDay',state['objects']['fund000001'])
   two=g.run(root,cfg,fetch,date(2026,11,24),time.monotonic()+120);self.assertEqual(two['coverage']['pending'],0);self.assertIn(('of000001',2),pages)
   data=json.loads((root/'prototype/.public-corpus/activity/funds/01.json').read_text());self.assertEqual(len(data['objects']['fund000001']['forum']['records']),1)
-  public=json.loads((d/'v10/activity/funds/01.json').read_text());self.assertEqual(public['objects']['fund000001']['forum']['records'],[]);self.assertEqual(public['objects']['fund000001']['forum']['storedPostCount'],1)
+  public=json.loads((d/'v10/activity/funds/01.json').read_text());self.assertEqual(public['objects']['fund000001']['forum']['records'][0]['id'],'1');self.assertEqual(public['objects']['fund000001']['forum']['storedPostCount'],1)
  def test_refusal_stops_every_object_and_retains_global_cooldown(self):
   root,d,cfg=self.fixture();calls=[]
   def denied(url):calls.append(url);raise u.SourceRefused('403')
@@ -80,5 +80,25 @@ class GlobalTests(unittest.TestCase):
    u.init_llm(folder/(yesterday.isoformat()+'.json'),yesterday.isoformat());u.MODEL_CIRCUIT_ERROR=None
    self.assertIsNone(u._post_llm('https://example.test','test','glm-5.3-flash',[],8192));self.assertEqual(u.LLM_STATE['date'],today.isoformat());self.assertTrue(u.LLM_STATE['stoppedByBudget'])
   self.assertEqual(json.loads((folder/(yesterday.isoformat()+'.json')).read_text())['costCNY'],2)
+
+
+ def test_single_post_gets_body_without_claims_or_model(self):
+  root,d,cfg=self.fixture();cfg.update(llmClaims=False,maxPostsPerObject=30);cfg['forumDaily'].update(pagesPerVisit=2,detailObjectsPerBatch=3,detailsPerVisit=30)
+  def fetch(url):
+   if '/news,' in url:return '<script>var post_article={"post_content":"<p>正文内容</p>"};</script>'
+   q=parse_qs(urlparse(url).query);rows=[dict(post_id=42,post_title='独立帖子',post_publish_time='2026-11-23 10:00:00',post_click_count=1,post_comment_count=0)] if q['code']==['of000001'] and q['p']==['1'] else []
+   return json.dumps({'rc':1,'re':rows})
+  with patch.object(u,'cluster_forum',side_effect=AssertionError('No scheduled aggregation')),patch.object(n,'run',side_effect=AssertionError('No scheduled model')):
+   result=g.run(root,cfg,fetch,date(2026,11,24),time.monotonic()+120)
+  post=json.loads((d/'v12/posts/funds/000001.json').read_text())['records'][0]
+  self.assertEqual(post['content'],'正文内容');self.assertEqual(post['coverage']['comments'],'complete');self.assertEqual(result['enrichedPosts'],1)
+ def test_daily_cap_is_30_and_does_not_claim_complete_source_count(self):
+  root,d,cfg=self.fixture();cfg.update(maxPostsPerObject=30);cfg['forumDaily']['pagesPerVisit']=2
+  def fetch(url):
+   q=parse_qs(urlparse(url).query);rows=[dict(post_id=i+1,post_title='帖子'+str(i),post_publish_time='2026-11-23 10:00:00',post_top_status=0) for i in range(50)] if q['code']==['of000001'] else []
+   return json.dumps({'rc':1,'re':rows})
+  g.run(root,cfg,fetch,date(2026,11,24),time.monotonic()+120)
+  post=json.loads((d/'v10/activity/funds/01.json').read_text())['objects']['fund000001']['forum']
+  self.assertEqual(len(post['records']),30);self.assertEqual(post['listCoverage']['status'],'daily-cap-reached');self.assertEqual(post['metrics'][0]['coverage'],'daily-cap')
 
 if __name__=='__main__':unittest.main()

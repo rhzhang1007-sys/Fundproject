@@ -175,13 +175,16 @@ def collect_fund_announcements(fetch,index,start,end,max_pages=100):
         try:
             data=json.loads(fetch('https://api.fund.eastmoney.com/f10/JJGG?'+urlencode(dict(fundcode='',pageIndex=page,pageSize=100,type=0))))
             events,dates=fund_page(data,index)
+            signature=tuple(x.get('ID') for x in data['Data'])
+            if signature and signature in seen:raise ValueError('Fund announcement pagination repeated')
         except SourceRefused:raise
         except (ValueError,RuntimeError,OSError) as exc:
-            fallback,check=collect_cninfo_funds(fetch,index,start,end,min(max_pages,100))
+            try:fallback,check=collect_cninfo_funds(fetch,index,start,end,min(max_pages,100))
+            except SourceRefused:raise
+            except (ValueError,RuntimeError,OSError) as fallback_error:
+                return rows,dict(status='partial-source-unavailable',primaryError=str(exc),primaryScanned=scanned,fallbackError=str(fallback_error))
             return rows+fallback,dict(status='partial-source-fallback',primaryError=str(exc),primaryScanned=scanned,fallback=check,scope='CNINFO fund-disclosure column; not all domestic fund announcements')
         scanned+=len(data['Data'])
-        signature=tuple(x.get('ID') for x in data['Data'])
-        if signature and signature in seen:raise ValueError('Fund announcement pagination repeated')
         seen.add(signature);rows.extend(e for e in events if start<=e['date']<=end)
         if not dates or (dates==sorted(dates,reverse=True) and max(dates)<start):return rows,dict(status='date-boundary',pages=page,scanned=scanned)
     return rows,dict(status='partial-page-limit',pages=max_pages,scanned=scanned)

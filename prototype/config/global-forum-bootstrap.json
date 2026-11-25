@@ -1,1 +1,5 @@
-{"requestId": "2026-11-25-overnight-import-and-cache-fix", "scope": "all-directory-identities"}
+{
+  "requestId": "2026-11-25-overnight-import-and-cache-fix",
+  "scope": "all-directory-identities",
+  "revision": "source-only-posts-30-and-daily-factors-2026-11-25"
+}

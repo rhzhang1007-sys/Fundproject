@@ -47,6 +47,7 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_news_pipeline.py'
           python -m unittest discover -s prototype/tests -p 'test_global_*.py'
           python -m unittest discover -s prototype/tests -p 'test_overnight_import.py'
+          python -m unittest discover -s prototype/tests -p 'test_daily_factors.py'
       - name: Validate website data interfaces
         run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs
       - name: Check runtime configuration without collecting
@@ -102,7 +103,7 @@ jobs:
           if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
           # A successful earlier forum object is retained even if a later source failed.
           paths+=['prototype/dist/data/v08/forum.json']
-          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/','prototype/dist/data/v11/forum-seed.json']
+          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/','prototype/dist/data/v11/forum-seed.json','prototype/dist/data/v12/posts']
           existing=[p for p in paths if Path(p).exists()]
           if existing:subprocess.run(['git','add','--',*existing],check=True)
           if Path('prototype/dist/data/archive').exists():subprocess.run(['git','add','-A','--','prototype/dist/data/archive'],check=True)

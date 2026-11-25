@@ -1,0 +1,49 @@
+name: Daily NAV and deterministic factors
+on:
+  schedule:
+    # 08:35 Asia/Shanghai. Same writer lock as public data; scheduling may delay.
+    - cron: '35 0 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: daily-public-data-collection
+  cancel-in-progress: false
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate formulas and daily NAV adapter
+        run: python -m unittest discover -s prototype/tests -p 'test_daily_factors.py'
+      - name: Collect source NAV, update frontend, compute eligible factors
+        run: |
+          python prototype/scripts/collect_nav_snapshot.py --size 1000 --max-pages 60 --sleep 1 --fill-limit 9000 --fill-minutes 20
+          python prototype/scripts/sync_nav_observations.py
+          python prototype/scripts/compute_daily_factors.py
+      - name: Commit validated daily observations and factors
+        if: success()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add prototype/dist/data/v12 prototype/dist/data/v11/observations
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Update daily NAV observations and eligible v2 factors'
+          git -c rebase.autoStash=true pull --rebase
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-factor-status
+          path: |
+            prototype/dist/data/v12/*status.json
+          if-no-files-found: ignore
+          retention-days: 14

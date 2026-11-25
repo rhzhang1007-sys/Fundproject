@@ -77,3 +77,5 @@ body.v7{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft Ya
 @media(prefers-reduced-motion:reduce){.g-node,.g-world{transition:none!important;}}
 .g-focus strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;}
 .v10-profile .v8-properties{grid-template-columns:minmax(7rem,1fr) minmax(0,2fr);gap:.7rem 1rem}.v10-profile dd{overflow-wrap:anywhere}.v10-profile h2 small{font-size:.875rem;font-weight:400}#settings-form details{margin:1rem 0}#settings-form summary{cursor:pointer;margin-bottom:1rem}
+
+.v11-post-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:30rem;overflow:auto}

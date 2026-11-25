@@ -631,7 +631,7 @@ def announcements(fetch, obj, start, end, pages):
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix('.tmp')
-    temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+    temp.write_text(json.dumps(value, ensure_ascii=False, separators=(',',':')) + '\n')
     temp.replace(path)
 
 

@@ -33,7 +33,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
     u.LLM_DEADLINE=deadline;u.MODEL_CIRCUIT_ERROR=None;u.LLM_LIVE_BILLING=True
     # Billing follows the real call date, not an old observation/backfill date.
     billing=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat();u.init_llm(dist/'v08/llm-usage'/f'{billing}.json',billing)
-    shards={};dirty=set();errors=[];listed=0;pages=0;visited=0;enriched=0
+    shards={};dirty=set();errors=[];listed=0;pages=0;visited=0;enriched=0;started=time.monotonic()
     def activity(obj):
         key=f"{obj['kind']}s/{shard(obj['code'])}.json"
         if key not in shards:
@@ -57,9 +57,13 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
             if task.get('throughDay','')>=target or task.get('retryAfter','')>now:continue
             forum=activity(obj);code=('of' if obj['kind']=='fund' else '')+obj['code']
             if not task.get('scan') or task['scan']['from']<window:
-                start=max(window,(datetime.strptime(task['throughDay'],'%Y-%m-%d').date()+timedelta(days=1)).isoformat() if task.get('throughDay') else window)
+                start=max(window,(day-timedelta(days=max(1,int(settings.get('collectionDays',1))))).isoformat(),(datetime.strptime(task['throughDay'],'%Y-%m-%d').date()+timedelta(days=1)).isoformat() if task.get('throughDay') else target)
                 task['scan']=dict(page=1,**{'from':start,'to':target},lastDate=None,lastSignature=None)
-            scan=task['scan'];posts={r['id']:r for r in forum['records']}
+            scan=task['scan']
+            # Abandon an old backfill window when daily-only collection is requested.
+            if scan['from']<target and int(settings.get('collectionDays',1))==1:
+                task['scan']=scan=dict(page=1,**{'from':target,'to':target},lastDate=None,lastSignature=None)
+            posts={r['id']:r for r in forum['records']}
             try:
                 for _ in range(int(settings.get('pagesPerVisit',3))):
                     if time.monotonic()>=list_deadline:break
@@ -81,11 +85,16 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                             posts[row['id']]=combined
                     if not ordered:raise ValueError('Forum publication order changed; boundary unproven')
                     scan.update(lastDate=last,lastSignature=signature,page=scan['page']+1)
-                    forum['records']=list(posts.values());forum['listCoverage']=dict(status='pending-pages',start=scan['from'],end=scan['to'],nextPage=scan['page'],checkedAt=now)
-                    if not raw or dates and dates[-1]<scan['from']:
+                    cap=max(1,int(config.get('maxPostsPerObject',30)))
+                    grouped=defaultdict(list)
+                    for row in posts.values():grouped[row['date']].append(row)
+                    forum['records']=[r for rows in grouped.values() for r in sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:cap]]
+                    capped=sum(r['date']==scan['to'] for r in forum['records'])>=cap
+                    forum['listCoverage']=dict(status='pending-pages',start=scan['from'],end=scan['to'],nextPage=scan['page'],checkedAt=now)
+                    if not raw or dates and dates[-1]<scan['from'] or capped:
                         task['throughDay']=scan['to'];task['coveredFrom']=min(task.get('coveredFrom',scan['from']),scan['from']);task.pop('retryAfter',None)
-                        forum['listCoverage'].update(status='source-window-complete');by_day=defaultdict(list)
-                        for row in posts.values():
+                        forum['listCoverage'].update(status='daily-cap-reached' if capped else 'source-window-complete',postLimit=cap);by_day=defaultdict(list)
+                        for row in forum['records']:
                             if scan['from']<=row['date']<=scan['to']:by_day[row['date']].append(row)
                         metrics={x['date']:x for x in forum['metrics']}
                         metric_day=datetime.strptime(scan['from'],'%Y-%m-%d').date()
@@ -96,7 +105,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                             if len(history)==20:
                                 mean=sum(x['sampledPosts'] for x in history)/20;sd=(sum((x['sampledPosts']-mean)**2 for x in history)/20)**.5
                                 if sd:z=(len(rows)-mean)/sd
-                            metrics[date]=dict(objectId=oid,date=date,sampledPosts=len(rows),readCount=sum(x['readCount'] for x in rows) if all(type(x.get('readCount')) is int for x in rows) else None,commentCount=sum(x['commentCount'] for x in rows) if all(type(x.get('commentCount')) is int for x in rows) else None,coverage='publication-boundary',zScore=z,countBasis='publication-day-posts; observed cumulative engagement')
+                            metrics[date]=dict(objectId=oid,date=date,sampledPosts=len(rows),readCount=sum(x['readCount'] for x in rows) if all(type(x.get('readCount')) is int for x in rows) else None,commentCount=sum(x['commentCount'] for x in rows) if all(type(x.get('commentCount')) is int for x in rows) else None,coverage='daily-cap' if capped else 'publication-boundary',zScore=None if capped else z,countBasis='publication-day-posts; observed cumulative engagement')
                             metric_day+=timedelta(days=1)
                         forum['metrics']=list(metrics.values());task.pop('scan');listed+=1;break
             except u.SourceRefused:refusal();raise
@@ -107,17 +116,18 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                 if 'order changed' in str(exc):task.pop('scan',None)
             if visited%10==0:checkpoint()
         checkpoint()
-        from news_llm_queue import run as run_news_llm
-        news_model_status=run_news_llm(root,config)
-        candidates=[obj for obj in registry if obj['id'] in state['objects'] and state['objects'][obj['id']].get('throughDay')]
-        cache_path=dist/'v08/llm-cache.json';cache=u.load(cache_path,{})
+        # Bodies/comments are public-source work. They must never depend on a model,
+        # a minimum post count, or completion of pagination for that object.
+        candidates=[obj for obj in registry if obj['id'] in state['objects']]
+        news_model_status={'status':'separate-news-job'}
         for _ in range(min(len(candidates),int(settings.get('detailObjectsPerBatch',30)))):
             if time.monotonic()>deadline-35 or not candidates:break
             i=state['detailCursor']%len(candidates);state['detailCursor']=(i+1)%len(candidates);obj=candidates[i];forum=activity(obj);oid=obj['id'];code=('of' if obj['kind']=='fund' else '')+obj['code']
             by_day=defaultdict(list);visit_details=0
             for row in forum['records']:by_day[row['date']].append(row)
-            for date,rows in sorted(by_day.items()):
-                if date>state['objects'][oid]['throughDay'] or len(rows)<=int(config.get('minPostsForClaims',5)):continue
+            for date,rows in sorted(by_day.items(),reverse=True):
+                if not (day-timedelta(days=2)).isoformat()<=date<=target:continue
+                rows=sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:max(1,int(config.get('maxPostsPerObject',30)))]
                 done=0
                 for row in rows:
                     if row.get('coverage',{}).get('body')=='complete':continue
@@ -131,20 +141,16 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                     if time.monotonic()>deadline-35:break
                     if row.get('coverage',{}).get('body')=='complete' and row.get('coverage',{}).get('comments')!='complete':
                         read_comments(fetch,row,int(settings.get('commentPagesPerVisit',3)))
-                # A partial body is kept but never passed off as having read the complete corpus.
-                if any(x.get('coverage',{}).get('body')!='complete' for x in rows):continue
-                claims,why=u.cluster_forum(obj['name'],date,rows,cache,int(config.get('minPostsForClaims',5)))
-                block=dict(objectId=oid,date=date,claims=claims,status=why,postCount=len(rows),commentsComplete=all(x.get('coverage',{}).get('comments')=='complete' for x in rows),basis='provided-posts-and-available-comments',promptVersion=u.PROMPT_VERSION)
-                forum['claims']=[x for x in forum['claims'] if x['date']!=date]+[block]
-                write(cache_path,cache);checkpoint()
-                if u.LLM_STATE.get('stoppedByBudget') or u.MODEL_CIRCUIT_ERROR:break
-            if u.LLM_STATE.get('stoppedByBudget') or u.MODEL_CIRCUIT_ERROR:break
+                # Persist source material even when a comment endpoint is incomplete.
+                state['objects'][oid]['bodyCoverage']=dict(day=date,selected=len(rows),complete=sum(x.get('coverage',{}).get('body')=='complete' for x in rows),commentsComplete=sum(x.get('coverage',{}).get('comments')=='complete' for x in rows))
+                forum['claims']=[]
+                checkpoint()
     except u.SourceRefused:errors.append(dict(stage='public-source',reason='source-refused; global 24-hour cooldown'))
     except TimeoutError:errors.append(dict(stage='batch',reason='time-budget; remaining work retained'))
     finally:
         state['updatedAt']=now;checkpoint();u.persist_usage();write(dist/'v08/llm-usage.json',u.LLM_STATE);u.LLM_LIVE_BILLING=False
     coverage=publish(root,day)
-    result=dict(schemaVersion=1,status='partial' if coverage['forum']['pending'] or errors else 'success',scope=len(registry),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=getattr(fetch,'calls',None))
+    result=dict(schemaVersion=1,status='partial' if not coverage['forum']['allMaterialComplete'] or errors else 'success',scope=len(registry),seconds=round(time.monotonic()-started,3),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,postLimitPerObjectPerDay=max(1,int(config.get('maxPostsPerObject',30))),scheduledOpinionAggregation=False,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=getattr(fetch,'calls',None))
     write(dist/'v10/forum-batch-status.json',result);return result
 
 if __name__=='__main__':
