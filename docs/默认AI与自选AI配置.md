@@ -33,6 +33,8 @@ WEB_LLM_MODEL=
 
 ## 多人访问与发布的边界
 
+`WEB_LLM_ORIGIN`在本机使用时留空即可，`http://127.0.0.1:8765`、其他本机端口及`localhost`均由服务自动核对。这里填写的是网页的来源地址，不是模型API地址。以后部署时填“协议＋主机名＋非默认端口（如果有）”，例如`https://fund.example.com`或`https://fund.example.com:8443`；不要填写`/index.html`、`/api/ai`等路径，也不要在末尾加斜杠。设置后重启Node服务生效。Key继续只填在服务端。
+
 当前网站发布仍关闭。本机127.0.0.1地址只有本机能访问。代码准备完成不等于已经上线共享服务。
 
 以后需要让其他用户直接使用默认AI，应部署本包Node服务，并通过同一HTTPS域名提供网页和 `/api/ai`。在服务端填写 `WEB_LLM_ORIGIN` 为该HTTPS站点的完整origin（例如 `https://your-domain.example`，不带路径或末尾斜杠），Key仍保存在服务端环境中。当前此项留空，允许本机localhost使用。

@@ -1,5 +1,6 @@
 import {graphSubset} from './v08-model.mjs';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const weight=v=>Number.isFinite(v)?v.toFixed(2)+'%':'占比待核';
 export function createGraph(root,api){
  let m,focus='portfolio',z=1,x=0,y=0,pan=null,pts=new Map(),pinch=null,gestureScale=1,anim;
  root.innerHTML='<div class="g-viewport" tabindex="0" aria-label="关联图谱"><div class="g-world"><svg class="g-lines" width="850" height="660" aria-hidden="true"></svg><div class="g-nodes"></div></div></div>';
@@ -11,9 +12,9 @@ export function createGraph(root,api){
   if(group.kind==='portfolio'){
    arr.push({id:'portfolio',name:'我的组合',sub:m.total?'¥'+m.total.toLocaleString('zh-CN'):'',kind:'portfolio',x:10,y:278});
    group.funds.forEach((f,i)=>{arr.push({id:f.id,name:f.name,sub:f.share.toFixed(2)+'%',kind:'fund',x:300,y:35+i*(520/Math.max(1,group.funds.length-1))});edges.push(['portfolio',f.id]);});
-   group.companies.forEach((c,i)=>{arr.push({id:c.id,name:c.name,sub:c.share.toFixed(2)+'%',kind:'company',x:625,y:10+i*62});for(const f of group.funds)if(c.paths.some(p=>p.fundId===f.id))edges.push([f.id,c.id]);});
-  }else if(group.kind==='fund'&&group.root){const f=group.root;arr.push({id:f.id,name:f.name,sub:f.share.toFixed(2)+'%',kind:'fund',x:110,y:278});group.companies.forEach((c,i)=>{arr.push({id:c.id,name:c.name,sub:(f.holdings.find(r=>r.code===c.code)?.weight??0).toFixed(2)+'%',kind:'company',x:550,y:10+i*62});edges.push([f.id,c.id]);});
-  }else if(group.root){const c=group.root;arr.push({id:c.id,name:c.name,sub:c.share.toFixed(2)+'%',kind:'company',x:550,y:278});group.funds.slice(0,8).forEach((f,i)=>{arr.push({id:f.id,name:f.name,sub:f.share.toFixed(2)+'%',kind:'fund',x:110,y:25+i*70});edges.push([f.id,c.id]);});}
+   group.companies.forEach((c,i)=>{arr.push({id:c.id,name:c.name,sub:weight(c.share),kind:'company',x:625,y:10+i*62});for(const f of group.funds)if(c.paths.some(p=>p.fundId===f.id))edges.push([f.id,c.id]);});
+  }else if(group.kind==='fund'&&group.root){const f=group.root;arr.push({id:f.id,name:f.name,sub:weight(f.share),kind:'fund',x:110,y:278});group.companies.forEach((c,i)=>{arr.push({id:c.id,name:c.name,sub:weight(f.holdings.find(r=>r.code===c.code)?.weight),kind:'company',x:550,y:10+i*62});edges.push([f.id,c.id]);});
+  }else if(group.root){const c=group.root;arr.push({id:c.id,name:c.name,sub:weight(c.share),kind:'company',x:550,y:278});group.funds.slice(0,8).forEach((f,i)=>{arr.push({id:f.id,name:f.name,sub:weight(f.share),kind:'fund',x:110,y:25+i*70});edges.push([f.id,c.id]);});}
   const byId=new Map(arr.map(n=>[n.id,n]));
   // Reuse existing cards, so changing focus animates node positions instead of replacing the graph.
   for(const el of nodes.children)if(!byId.has(el.dataset.graphId)){el.classList.add('leaving');setTimeout(()=>{if(el.classList.contains('leaving'))el.remove();},300);}

@@ -45,6 +45,8 @@ def merge_events(previous, incoming, as_of, days=30):
         if date > as_of:
             raise ValueError('Future publication date')
         clean = {k: e.get(k) for k in ('id', 'entityCode', 'entityName', 'title', 'summary', 'date', 'source', 'url', 'kind', 'entityCodes', 'entities', 'summaryBasis', 'sourceRecordId', 'publishedAt', 'topics', 'entityHints', 'contentCoverage', 'originPublishedAt', 'publicationTimeBasis', 'eventOccurredAt', 'sourceSecurityRefs')}
+        for metadata in ['urlRole','sourceInputVersion']:
+            if e.get(metadata):clean[metadata]=e[metadata]
         clean['url'] = canonical_url(e['url'])
         # Group exact title duplicates within the same entity and publication day only.
         # Similar words alone never establish that two articles are the same event.

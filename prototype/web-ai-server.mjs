@@ -13,7 +13,8 @@ export async function readServerConfig(env=process.env){
  const get=k=>env[k]??file[k]??'';const url=get('WEB_LLM_API_URL'),model=get('WEB_LLM_MODEL'),key=get('WEB_LLM_API_KEY');
  let input=Number(get('WEB_LLM_PRICE_IN')),output=Number(get('WEB_LLM_PRICE_OUT')),priceReviewAfter=null;
  if(!get('WEB_LLM_PRICE_IN').trim()&&!get('WEB_LLM_PRICE_OUT').trim())try{const catalog=JSON.parse(await readFile(path.join(HERE,'config/llm-pricing.json'),'utf8'));const entry=catalog.entries.find(x=>x.host===new URL(url).hostname&&x.model===model.toLowerCase());if(entry&&today()<=catalog.reviewAfter){input=entry.input;output=entry.output;priceReviewAfter=catalog.reviewAfter;}}catch{}
- return {url,model,key,input,output,priceReviewAfter,origin:get('WEB_LLM_ORIGIN'),budget:Number(get('WEB_LLM_DAILY_BUDGET')||5),ledger:path.join(HERE,'.private/web-ai-usage.json')};
+ let origin=get('WEB_LLM_ORIGIN').trim();if(origin){let parsed;try{parsed=new URL(origin);}catch{throw Error('WEB_LLM_ORIGIN须填网页的协议和域名；本机使用请留空');}if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)throw Error('WEB_LLM_ORIGIN不能包含路径、查询参数或认证信息');origin=parsed.origin;}
+ return {url,model,key,input,output,priceReviewAfter,origin,budget:Number(get('WEB_LLM_DAILY_BUDGET')||5),ledger:path.join(HERE,'.private/web-ai-usage.json')};
 }
 function validateInput(body){
  if(!body||!Object.hasOwn(PROMPTS,body.task)||Object.keys(body).some(k=>!['task','materials','question'].includes(k)))throw Error('请求格式无效');

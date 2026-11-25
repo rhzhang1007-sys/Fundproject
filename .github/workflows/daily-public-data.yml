@@ -41,8 +41,9 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_public_updates*.py'
           python -m unittest discover -s prototype/tests -p 'test_news_pipeline.py'
           python -m unittest discover -s prototype/tests -p 'test_global_*.py'
+          python -m unittest discover -s prototype/tests -p 'test_overnight_import.py'
       - name: Validate website data interfaces
-        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/web-ai-server.test.mjs
+        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs
       - name: Check runtime configuration without collecting
         env:
           LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
@@ -96,14 +97,14 @@ jobs:
           if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
           # A successful earlier forum object is retained even if a later source failed.
           paths+=['prototype/dist/data/v08/forum.json']
-          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/']
+          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/','prototype/dist/data/v11/forum-seed.json']
           existing=[p for p in paths if Path(p).exists()]
           if existing:subprocess.run(['git','add','--',*existing],check=True)
           if Path('prototype/dist/data/archive').exists():subprocess.run(['git','add','-A','--','prototype/dist/data/archive'],check=True)
           PY
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update public news and dated market observations'
-          git pull --rebase
+          git -c rebase.autoStash=true pull --rebase
           git push
       - name: Save readable run report
         if: always() && github.event_name != 'push' && steps.gate.outputs.enabled == 'true'

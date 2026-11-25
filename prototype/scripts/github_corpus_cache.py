@@ -23,7 +23,7 @@ class StripAuthRedirect(HTTPRedirectHandler):
 
 def request(url,token,method='GET',body=None,binary=False):
  if not url.startswith(('https://api.github.com/','https://uploads.github.com/')):raise ValueError('Unexpected GitHub cache host')
- headers={'Accept':'application/octet-stream' if binary else 'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10','Authorization':'Bearer '+token}
+ headers={'Accept':'application/octet-stream' if binary and method=='GET' else 'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10','Authorization':'Bearer '+token}
  if body is not None:headers['Content-Type']='application/gzip' if binary else 'application/json';body=body if isinstance(body,bytes) else json.dumps(body).encode()
  try:
   with build_opener(StripAuthRedirect()).open(Request(url,headers=headers,data=body,method=method),timeout=90) as response:

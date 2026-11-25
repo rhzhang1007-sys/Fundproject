@@ -39,5 +39,14 @@ class CorpusTests(unittest.TestCase):
   write(self.pointer,dict(assetId=2,releaseId=7))
   with patch.object(c,'request',return_value={'id':7,'draft':False}):
    with self.assertRaises(ValueError):c.sync('push',self.root,token='test-only',repo='owner/repo')
+ def test_asset_upload_requests_json_response_and_download_requests_binary(self):
+  with patch.object(c,'build_opener') as factory:
+   factory.return_value.open.return_value.__enter__.return_value.read.return_value=b'{}'
+   c.request('https://uploads.github.com/repos/owner/repo/releases/7/assets?name=test.gz','test-only','POST',b'bytes',binary=True)
+   req=factory.return_value.open.call_args.args[0]
+   self.assertEqual(req.get_header('Accept'),'application/vnd.github+json')
+   self.assertEqual(req.get_header('Content-type'),'application/gzip')
+   c.request('https://api.github.com/repos/owner/repo/releases/assets/3','test-only',binary=True)
+   self.assertEqual(factory.return_value.open.call_args.args[0].get_header('Accept'),'application/octet-stream')
 
 if __name__=='__main__':unittest.main()

@@ -23,7 +23,7 @@ export function sourceFreshness(s,today) {
   return date>=window.start?{cadence,kind:'recent',label:'近一个月动态',window}:{cadence,kind:'historical',label:'历史动态',window};
 }
 export function sortSources(sources) {
-  return [...sources].sort((a,b)=>(b.publishedAt||'').localeCompare(a.publishedAt||'')||a.id.localeCompare(b.id));
+  return [...sources].sort((a,b)=>(b.publishedAt||b.period||'').localeCompare(a.publishedAt||a.period||'')||a.id.localeCompare(b.id));
 }
 // Existing records are not falsely presented as verbatim full-text quotations.
 export function sourceHighlights(source) {

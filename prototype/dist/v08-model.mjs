@@ -21,10 +21,10 @@ export function holdingsModel(account,publicFunds) {
   const map=new Map();
   for(const f of funds)for(const row of f.holdings){
     const c=map.get(row.code)||{id:'stock'+row.code,code:row.code,name:row.name,share:0,amount:0,paths:[]};
-    const share=f.share*row.weight/100;c.share+=share;c.amount+=f.amount*row.weight/100;
+    const share=Number.isFinite(row.weight)?f.share*row.weight/100:null;if(share!==null){c.share+=share;c.amount+=f.amount*row.weight/100;}else c.hasUnknownWeight=true;
     c.paths.push({fundId:f.id,code:f.code,name:f.name,weight:row.weight,contribution:share,asOf:f.disclosure?.asOf||null});map.set(row.code,c);
   }
-  const companies=[...map.values()].sort((a,b)=>b.share-a.share||a.code.localeCompare(b.code));
+  const companies=[...map.values()].map(c=>({...c,share:c.hasUnknownWeight?null:c.share,amount:c.hasUnknownWeight?null:c.amount})).sort((a,b)=>(b.share??-1)-(a.share??-1)||a.code.localeCompare(b.code));
   return {...amounts,funds,companies,covered:companies.reduce((s,c)=>s+c.share,0)};
 }
 export function graphSubset(model,focus='portfolio') {

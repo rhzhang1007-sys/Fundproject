@@ -24,6 +24,10 @@ export function validatePublicData(path,value){
 }
 export async function loadPublicData(path,fallback,{fetcher=fetch,timeout=8000}={}){
  const url=publicDataUrl(path),ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),timeout);
- try{const response=await fetcher(url,{signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store'});if(!response.ok)throw Error('公开资料暂不可读');return validatePublicData(path,await response.json());}
+ try{const response=await fetcher(url,{signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store'});if(!response.ok)throw Error('公开资料暂不可读');const remote=validatePublicData(path,await response.json());return path.startsWith('v10/activity/')&&fallback?.objects?mergeActivity(fallback,remote):remote;}
  catch{return fallback;}finally{clearTimeout(timer);}
+}
+export function mergeActivity(local,remote){
+ const union=(a=[],b=[],key=x=>x.id)=>[...new Map([...a,...b].map(x=>[key(x),x])).values()];
+ const objects={...local.objects};for(const [id,row] of Object.entries(remote.objects||{})){const old=objects[id]||{},a=old.forum||{},b=row.forum||{};objects[id]={...old,...row,news:union(old.news,row.news),forum:{...a,...b,records:union(a.records,b.records),metrics:union(a.metrics,b.metrics,x=>x.date),claims:union(a.claims,b.claims,x=>x.date)}};}return {schemaVersion:1,objects};
 }

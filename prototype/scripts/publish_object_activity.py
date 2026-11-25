@@ -32,14 +32,18 @@ def publish(root,as_of=None):
             if not any(x['id']==event['id'] for x in entry['news']):entry['news'].append(event)
     # One-time migration preserves earlier public posts; new readers write directly to shards.
     legacy=dist/'v08/forum.json'
-    if legacy.exists():
-        old=load(legacy)
+    seed=dist/'v11/forum-seed.json'
+    for source in [p for p in [legacy,seed] if p.exists()]:
+        old=load(source)
+        if source==seed:
+            old['records']=[r for r in old.get('records',[]) if start<=r.get('date','')<=end]
+            write(seed,old)
         for field in ['records','metrics','claims']:
             for row in old.get(field,[]):
                 oid=row['objectId']
                 if oid not in known or not start<=row.get('date','')<=end:continue
                 kind='fund' if oid.startswith('fund') else 'stock';key=f'{kind}s/{shard(oid[len(kind):])}.json';entry=groups[key]['objects'].setdefault(oid,{'news':[],'forum':{}})['forum'];items=entry.setdefault(field,[])
-                identity=(lambda x:x.get('id')) if field=='records' else (lambda x:x.get('date'))
+                identity=(lambda x:x.get('url') or x.get('id')) if field=='records' else (lambda x:x.get('date'))
                 if not any(identity(x)==identity(row) for x in items):items.append(row)
     for key,value in groups.items():
         write(root/'prototype/.public-corpus/activity'/key,value)
