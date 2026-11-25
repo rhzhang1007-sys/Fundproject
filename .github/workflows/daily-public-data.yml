@@ -3,8 +3,13 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/daily-public-data.yml'
+      - '.github/workflows/**'
       - 'prototype/scripts/**'
+      - 'prototype/**/*.mjs'
+      - 'prototype/**/*.css'
+      - 'prototype/dist/index.html'
+      - 'prototype/serve.py'
+      - 'prototype/tests/**'
       - 'prototype/config/**'
       - 'prototype/requirements-daily.txt'
   schedule:
