@@ -66,6 +66,9 @@ def publish(root,as_of=None):
         for oid,entry in value['objects'].items():
             forum=entry.get('forum',{})
             # Source material is useful independently of any generated opinions.
+            by_day={}
+            for r in forum.get('records',[]):by_day.setdefault(r['date'],[]).append(r)
+            forum['records']=[r for rows in by_day.values() for r in sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:30]]
             records=[]
             for row in sorted((r for r in forum.get('records',[]) if r['date']<=target),key=lambda r:(r['date'],r.get('publishedAt') or '',r['id']),reverse=True)[:30]:
                 item={k:row.get(k) for k in ['id','objectId','title','url','date','publishedAt','source','readCount','commentCount','content','coverage']}
@@ -79,6 +82,7 @@ def publish(root,as_of=None):
             metadata=[{k:v for k,v in r.items() if k not in ('content','comments')} for r in records]
             metrics=sorted(forum.get('metrics',[]),key=lambda x:x['date'])[-1:]
             public['objects'][oid]=dict(news=entry.get('news',[]),forum=dict(records=metadata,materialPath=post_path,claims=[],metrics=metrics,listCoverage=forum.get('listCoverage'),storedPostCount=len(forum.get('records',[]))))
+        write(root/'prototype/.public-corpus/activity'/key,value)
         write(dist/'v10/activity'/key,public)
     # Retired rolling-window files carry no forever-public copies of old comments.
     for old in (dist/'v12/posts').glob('*/*.json'):

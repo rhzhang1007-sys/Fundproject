@@ -33,7 +33,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
     u.LLM_DEADLINE=deadline;u.MODEL_CIRCUIT_ERROR=None;u.LLM_LIVE_BILLING=True
     # Billing follows the real call date, not an old observation/backfill date.
     billing=datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat();u.init_llm(dist/'v08/llm-usage'/f'{billing}.json',billing)
-    shards={};dirty=set();errors=[];listed=0;pages=0;visited=0;enriched=0;started=time.monotonic()
+    shards={};dirty=set();errors=[];listed=0;pages=0;visited=0;enriched=0;body_attempts=0;started=time.monotonic()
     def activity(obj):
         key=f"{obj['kind']}s/{shard(obj['code'])}.json"
         if key not in shards:
@@ -126,14 +126,14 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
             by_day=defaultdict(list);visit_details=0
             for row in forum['records']:by_day[row['date']].append(row)
             for date,rows in sorted(by_day.items(),reverse=True):
-                if not (day-timedelta(days=2)).isoformat()<=date<=target:continue
+                if date!=target:continue
                 rows=sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:max(1,int(config.get('maxPostsPerObject',30)))]
                 done=0
                 for row in rows:
                     if row.get('coverage',{}).get('body')=='complete':continue
                     if visit_details>=int(settings.get('detailsPerVisit',5)) or time.monotonic()>deadline-35:break
                     try:
-                        row.update(u.detail_record(fetch(row['url']),row.get('commentCount'),max_chars=500000));done+=1;visit_details+=1;enriched+=1
+                        row.update(u.detail_record(fetch(row['url']),row.get('commentCount'),max_chars=500000));done+=1;visit_details+=1;body_attempts+=1;enriched+=row.get('coverage',{}).get('body')=='complete'
                     except u.SourceRefused:refusal();raise
                     except TimeoutError:raise
                     except (ValueError,RuntimeError,OSError) as exc:errors.append(dict(objectId=oid,stage='body',reason=str(exc)[:160]));break
@@ -150,7 +150,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
     finally:
         state['updatedAt']=now;checkpoint();u.persist_usage();write(dist/'v08/llm-usage.json',u.LLM_STATE);u.LLM_LIVE_BILLING=False
     coverage=publish(root,day)
-    result=dict(schemaVersion=1,status='partial' if not coverage['forum']['allMaterialComplete'] or errors else 'success',scope=len(registry),seconds=round(time.monotonic()-started,3),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,postLimitPerObjectPerDay=max(1,int(config.get('maxPostsPerObject',30))),scheduledOpinionAggregation=False,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=getattr(fetch,'calls',None))
+    result=dict(schemaVersion=1,status='partial' if not coverage['forum']['allMaterialComplete'] or errors else 'success',scope=len(registry),seconds=round(time.monotonic()-started,3),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,bodyAttempts=body_attempts,postLimitPerObjectPerDay=max(1,int(config.get('maxPostsPerObject',30))),scheduledOpinionAggregation=False,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=getattr(fetch,'calls',None))
     write(dist/'v10/forum-batch-status.json',result);return result
 
 if __name__=='__main__':

@@ -60,7 +60,7 @@
     "enabled": true,
     "mode": "global-queue",
     "batchSeconds": 900,
-    "listBatchSeconds": 300,
+    "listBatchSeconds": 600,
     "pagesPerVisit": 3,
     "detailsPerVisit": 30,
     "detailObjectsPerBatch": 34595,
