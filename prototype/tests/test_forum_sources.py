@@ -5,6 +5,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import refresh_public_data as u
 import sina_forum as s
 class Sources(unittest.TestCase):
+ def test_html_paragraphs_do_not_join_numbers(self):
+  self.assertEqual(s.Tree('<div><p>10</p><p>20</p></div>').root.text(),'10 20')
  def test_reviewed_news_conflict_not_published(self):
   self.assertFalse(u.public_event_allowed({'sourceRecordId':'fast:202611223936892196'}))
   self.assertTrue(u.public_event_allowed({'sourceRecordId':'fast:other'}))

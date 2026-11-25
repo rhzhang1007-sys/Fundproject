@@ -8,7 +8,7 @@ from urllib.parse import parse_qs,urlparse,urljoin
 
 class Node:
     def __init__(self,tag='',attrs=()):self.tag=tag;self.attrs=dict(attrs);self.children=[]
-    def text(self):return re.sub(r'\s+',' ',''.join(x.text() if isinstance(x,Node) else x for x in self.children)).strip()
+    def text(self):return re.sub(r'\s+',' ',' '.join(x.text() if isinstance(x,Node) else x for x in self.children)).strip()
     def find(self,predicate):
         return ([self] if predicate(self) else [])+[y for x in self.children if isinstance(x,Node) for y in x.find(predicate)]
 class Tree(HTMLParser):
@@ -72,6 +72,6 @@ def detail(text,row,now):
     text_body=body[0].text();clipped=len(text_body)>500000
     reported=re.search(r'回复\((\d+)\)',text);count=int(reported[1]) if reported else row.get('commentCount')
     row.update(content=text_body[:500000],publishedAt=published,date=published[:10],comments=list(comments.values()),commentCount=count)
-    row['coverage']={'body':'partial' if clipped else 'complete','comments':'complete' if type(count) is int and len(comments)==count else 'partial' if comments else 'unknown','fetchedComments':len(comments),'reportedComments':count,'bodySource':'public-rendered-html'}
+    row['coverage']={'body':'partial' if clipped or not text_body else 'complete','comments':'complete' if type(count) is int and len(comments)==count else 'partial' if comments else 'unknown','fetchedComments':len(comments),'reportedComments':count,'bodySource':'public-rendered-html'}
     links=tree.find(lambda n:n.tag=='a' and n.text()=='下一页' and 's=thread' in n.attrs.get('href',''))
     return urljoin('https://guba.sina.com.cn',links[0].attrs['href']) if links else None
