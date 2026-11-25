@@ -31,7 +31,7 @@ def structure(funds,weights):
             code=r.get('code');v=r.get('weightPercent')
             if not code or code in seen or not number(v) or not 0<=v<=100:return dict(ready=False,reason='invalid-or-duplicate-position',asOf=as_of)
             seen.add(code);positions[code]=positions.get(code,0)+w*v/100
-    positions={c:v for c,v in positions.items() if v>0};coverage=sum(positions.values())
+    coverage=sum(positions.values())
     if coverage<.5:return dict(ready=False,reason='disclosure-coverage-below-50-percent',asOf=as_of,coverage=coverage)
     hhi=sum((v/coverage)**2 for v in positions.values());effective=1/hhi
     return dict(ready=True,asOf=as_of,coverage=coverage,complete=all(p.get('complete') is True for p in selected),nominal=len(positions),effective=effective,hhi=hhi,multiple=len(positions)/effective,top5=sum(sorted(positions.values(),reverse=True)[:5])/coverage,maximumExposure=max(positions.values()),basis='observed-holdings-normalized-within-disclosed-part')
@@ -103,6 +103,9 @@ def aligned_returns(series,calendar,as_of):
         try:cut=d.replace(year=d.year-3).isoformat()
         except ValueError:cut=d.replace(year=d.year-3,day=28).isoformat()
     rows=[]
+    try:
+        for d in calendar:date.fromisoformat(d)
+    except (TypeError,ValueError):return [],'invalid-calendar'
     if calendar!=sorted(set(calendar)):return [],'invalid-calendar'
     for a,b in zip(calendar,calendar[1:]):
         if b>end or a<cut:continue
@@ -149,9 +152,9 @@ def build(root=ROOT,as_of=None):
             benchmark,why=aligned_returns({**index,'basis':'nav-total-return'},calendar,as_of);other={(r['from'],r['date']):r['values'][0] for r in benchmark}
             pairs=[dict(**r,values=[r['values'][0],other[(r['from'],r['date'])]]) for r in rows if (r['from'],r['date']) in other]
             return pairs if len(pairs)>=200 and all(not i or r['from']==pairs[i-1]['date'] for i,r in enumerate(pairs)) else []
-        product=next((v for v in analytics.get('products',[]) if v.get('fundId')==obj['id']),{});index=next((v for v in analytics.get('indices',[]) if v.get('id')==product.get('benchmarkId')),None);pairs=paired(index)
-        row['tracking']={**tracking_metrics([r['values'] for r in pairs]),'benchmarkId':product.get('benchmarkId'),'benchmarkBasis':index.get('basis') if index else None}
-        market_index=next((v for v in analytics.get('indices',[]) if v.get('id')==analytics.get('marketReference')),None);pairs=paired(market_index);row['capture']=dict(ready=bool(pairs),**capture_ratios([r['values'] for r in pairs]),benchmarkBasis=market_index.get('basis') if market_index else None)
+        product=next((v for v in analytics.get('products',[]) if v.get('fundId')==obj['id']),{});index=next((v for v in analytics.get('indices',[]) if v.get('id')==product.get('benchmarkId')),None);is_etf='ETF' in (obj['name']+' '+obj.get('type','')) and '联接' not in (obj['name']+' '+obj.get('type',''));pairs=paired(index) if is_etf else []
+        row['tracking']={**tracking_metrics([r['values'] for r in pairs]),'benchmarkId':product.get('benchmarkId'),'benchmarkBasis':index.get('basis') if index else None,'from':pairs[0]['from'] if pairs else None,'to':pairs[-1]['date'] if pairs else None}
+        market_index=next((v for v in analytics.get('indices',[]) if v.get('id')==analytics.get('marketReference')),None);pairs=paired(market_index);row['capture']=dict(ready=bool(pairs),**capture_ratios([r['values'] for r in pairs]),benchmarkBasis=market_index.get('basis') if market_index else None,fromDate=pairs[0]['from'] if pairs else None,to=pairs[-1]['date'] if pairs else None)
         row['pressure']=p;counts['riskReady']+=row['risk']['ready'];counts['pressureReady']+=p['ready']
         groups.setdefault(key,dict(schemaVersion=1,funds={} ))['funds'][code]=row
     for key,payload in groups.items():write(dist/'v12/factors'/f'{key}.json',payload)

@@ -3,7 +3,8 @@ from pathlib import Path
 from datetime import date,timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from compute_daily_factors import structure,portfolio_risk,expected_shortfall,historical_path,aligned_returns,capture_ratios,tracking_metrics
-from collect_nav_snapshot import parse_row
+from collect_nav_snapshot import parse_row,merge_snapshots,collect
+from unittest.mock import patch
 from sync_nav_observations import sync
 from update_market_observations import parse as market_parse
 from build_global_foundation import write,shard
@@ -13,6 +14,7 @@ class FactorTests(unittest.TestCase):
   h=[dict(code=str(i),weightPercent=2.5) for i in range(20)];f=dict(periods=[dict(asOf='2026-06-30',holdings=h,complete=False)])
   s=structure([f],[1]);self.assertAlmostEqual(s['effective'],20);self.assertAlmostEqual(s['multiple'],1);self.assertEqual(s['coverage'],.5)
   self.assertFalse(structure([dict(periods=[dict(asOf='2026-06-30',holdings=h[:10])])],[1])['ready'])
+  h.append(dict(code='rounded-zero',weightPercent=0));self.assertEqual(structure([f],[1])['nominal'],21)
   h[1]['code']=h[0]['code'];self.assertFalse(structure([f],[1])['ready'])
  def test_different_period_and_missing_weight_do_not_compute(self):
   def fund(day):return dict(periods=[dict(asOf=day,holdings=[dict(code=str(i),weightPercent=3) for i in range(20)])])
@@ -39,6 +41,13 @@ class FactorTests(unittest.TestCase):
  def test_benchmark_uses_compound_returns_and_sample_error(self):
   r=capture_ratios([[.1,.05],[-.1,-.2],[.2,.1]]);self.assertAlmostEqual(r['up'],.32/.155);self.assertAlmostEqual(r['down'],.5)
   t=tracking_metrics([[.1,.05],[.2,.1]]);self.assertAlmostEqual(t['trackingDifference'],1.1*1.2-1.05*1.1);self.assertAlmostEqual(t['trackingError'],math.sqrt(.00125*252))
+ def test_early_bulk_failure_keeps_prefix_and_cached_observation_dates(self):
+  from collect_nav_snapshot import collect
+  with patch('collect_nav_snapshot.fetch_page',side_effect=[(['invalid-row'],20797),RuntimeError('premature empty')]):
+   records,bad,pages,dups,truncated,total,errors=collect(1,2,0)
+  self.assertTrue(truncated);self.assertEqual(total,20797);self.assertTrue(errors)
+  fresh={'000001':{'code':'000001','date':'2026-11-24','nav':2}};previous={'fetchedAt':'2026-11-23T10:00:00+08:00','funds':[{'code':'000002','date':'2026-11-22','nav':1}]}
+  rows,n,reused=merge_snapshots(fresh,previous,'2026-11-25T10:00:00+08:00');self.assertEqual((n,reused),(1,1));self.assertEqual(rows['000002']['date'],'2026-11-22');self.assertEqual(rows['000002']['fetchedAt'],previous['fetchedAt']);self.assertTrue(rows['000002']['cachedObservation'])
  def test_nav_invalid_date_and_snapshot_merge_preserves_newer(self):
   raw=['000001','基金','','股票型','','0']+['']*9+['2026-02-30','1','1']+['']*6
   self.assertIsNone(parse_row(','.join(raw)))

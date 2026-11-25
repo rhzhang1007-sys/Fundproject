@@ -22,3 +22,5 @@ test('风险贡献失效不连带隐藏独立可算的回撤和尾部损失',()=
 
 
 test('捕获比采用条件日期的复合收益，缺少已核基准时保持空值',async()=>{const {captureRatio,benchmarkV2}=await import('../dist/v11-analysis.mjs');const r=captureRatio([[.1,.05],[-.1,-.2],[.2,.1]]);assert.ok(Math.abs(r.up-.32/.155)<1e-12);assert.ok(Math.abs(r.down-.5)<1e-12);assert.equal(captureRatio([[.1,0]]).up,null);assert.equal(benchmarkV2({funds:[]},{marketReference:'index'}).capture,null);});
+
+test('因子AI材料使用页面已格式化的数值，不发送持仓金额',async()=>{const {factorEvidence}=await import('../dist/v11-analysis.mjs');const text=factorEvidence({funds:[],companies:[],covered:0,total:98765.43},{});assert.ok(!text.includes('98765.43'));assert.match(text,/不包含持仓金额/);assert.match(text,/结构/);});

@@ -15,12 +15,14 @@ def sync(root=ROOT,snapshot=None):
         path=dist/'v11/observations'/f'{key}.json';data=load(path) if path.exists() else dict(schemaVersion=1,funds={})
         for row in rows:
             ob=data['funds'].setdefault(row['code'],{})
-            if not ob.get('snapshot') or row['date']>=ob['snapshot']['date']:ob['snapshot']=row;updated+=1
+            observed_at=row.get('fetchedAt') or payload.get('fetchedAt')
+            replace=not ob.get('snapshot') or row['date']>ob['snapshot']['date'] or row['date']==ob['snapshot']['date'] and (observed_at or '')>=(ob.get('lastSnapshotFetchedAt') or '')
+            if replace:ob['snapshot']=row;ob['lastSnapshotFetchedAt']=observed_at;updated+=1
             # Retain the fetched observation separately; a missing history is not invented.
             history=ob.get('history')
-            if history and history.get('status')=='ok' and row.get('nav') is not None:
+            if replace and history and history.get('status')=='ok' and row.get('nav') is not None:
                 points={p[0]:p for p in history.get('points',[])};points[row['date']]=[row['date'],row['nav'],row.get('accNav'),row.get('dayChange')];history['points']=[points[d] for d in sorted(points)];history['count']=len(points)
-            ob['lastSnapshotFetchedAt']=payload.get('fetchedAt');ob['totalReturnVerified']=False
+            ob['totalReturnVerified']=False
         write(path,data)
     report=dict(updated=updated,unknownCodes=unknown,asOf=payload.get('asOf'),source='daily-nav-source-observations',verifiedTotalReturn=False);write(dist/'v12/nav-sync-status.json',report);return report
 if __name__=='__main__':

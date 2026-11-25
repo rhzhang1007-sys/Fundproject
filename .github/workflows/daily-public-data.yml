@@ -20,6 +20,7 @@ permissions:
   contents: read
 concurrency:
   group: daily-public-data-${{ github.event_name == 'push' && 'validation' || 'collection' }}
+  queue: max
   cancel-in-progress: false
 jobs:
   update:
@@ -51,11 +52,6 @@ jobs:
       - name: Validate website data interfaces
         run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs
       - name: Check runtime configuration without collecting
-        env:
-          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_MODEL: glm-5.3-flash
-          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
         run: python prototype/scripts/daily_pipeline.py
       - name: Read collection switch
         id: gate
@@ -65,30 +61,11 @@ jobs:
           config=json.load(open('prototype/config/public-updates.json'))
           print('enabled='+('true' if config.get('enabled') is True else 'false'))
           PY
-      - name: Restore private resumable corpus
-        id: corpus_restore
-        if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python prototype/scripts/github_corpus_cache.py pull
-      - name: Daily news, market facts and forum processing
+      - name: Daily public news and market facts
         id: collect
         if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
-        env:
-          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_MODEL: glm-5.3-flash
-          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
-        run: python prototype/scripts/daily_pipeline.py --collect
-      - name: Save and verify private corpus checkpoint
-        id: corpus_save
-        if: always() && steps.corpus_restore.outcome == 'success'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python prototype/scripts/github_corpus_cache.py push
-      - name: Persist validated data, status and budget ledger
-        env:
-          CORPUS_SAVED: ${{ steps.corpus_save.outcome }}
+        run: python prototype/scripts/daily_pipeline.py --collect --news-only
+      - name: Persist validated news, market facts and status
         if: always() && github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
         run: |
           git config user.name 'github-actions[bot]'
@@ -98,12 +75,9 @@ jobs:
           from pathlib import Path
           status=Path('prototype/dist/data/v09/update-status.json')
           ready=json.loads(status.read_text()) if status.exists() else {}
-          paths=['prototype/dist/data/v09/update-status.json','prototype/dist/data/v08/llm-usage.json','prototype/dist/data/v08/llm-usage','prototype/dist/data/v08/llm-cache.json','output/抽检-每日']
-          if ready.get('newsReady'): paths+=['prototype/dist/data/v07/events.json','prototype/dist/data/archive']
+          paths=['prototype/dist/data/v09/update-status.json']
+          if ready.get('newsReady'): paths+=['prototype/dist/data/v07/events.json','prototype/dist/data/archive','prototype/dist/data/v12/news','prototype/dist/data/v12/news-shard-status.json']
           if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
-          # A successful earlier forum object is retained even if a later source failed.
-          paths+=['prototype/dist/data/v08/forum.json']
-          if os.environ.get('CORPUS_SAVED')=='success':paths+=['prototype/dist/data/v10/','prototype/dist/data/v11/forum-seed.json','prototype/dist/data/v12/posts']
           existing=[p for p in paths if Path(p).exists()]
           if existing:subprocess.run(['git','add','--',*existing],check=True)
           if Path('prototype/dist/data/archive').exists():subprocess.run(['git','add','-A','--','prototype/dist/data/archive'],check=True)
@@ -119,7 +93,5 @@ jobs:
           name: public-data-status
           path: |
             prototype/dist/data/v09/update-status.json
-            prototype/dist/data/v08/llm-usage.json
-            output/抽检-每日/
           if-no-files-found: ignore
           retention-days: 14

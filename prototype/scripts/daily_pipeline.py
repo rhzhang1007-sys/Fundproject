@@ -164,7 +164,10 @@ def run(root,config,collect=False,as_of=None,fetch=None):
                     if isinstance(exc,TimeoutError):break
         status['forumReady']=successes==len(targets)
         status['forumScope']=dict(targets=len(targets),listed=len(listed),detailed=successes,successful=successes,allMarket=False)
-    if (dest/'v10/objects.json').exists():
+    if (dest/'v10/objects.json').exists() and not config.get('publishActivities',True):
+        from publish_news_shards import publish as publish_news
+        status['newsShards']=publish_news(root)
+    if (dest/'v10/objects.json').exists() and config.get('publishActivities',True):
         from publish_object_activity import publish
         publish(root,day)
     if u.MODEL_CIRCUIT_ERROR:status['errors'].append(dict(task='model',reason=u.MODEL_CIRCUIT_ERROR))
@@ -178,8 +181,9 @@ def run(root,config,collect=False,as_of=None,fetch=None):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=ROOT);p.add_argument('--config',type=Path);p.add_argument('--collect',action='store_true');p.add_argument('--as-of')
+    p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=ROOT);p.add_argument('--config',type=Path);p.add_argument('--collect',action='store_true');p.add_argument('--as-of');p.add_argument('--news-only',action='store_true',help='News/market writer only; forum owns its private corpus separately')
     args=p.parse_args();cfg=u.load(args.config or args.root/'prototype/config/public-updates.json',{})
+    if args.news_only:cfg={**cfg,'forumDaily':{**cfg.get('forumDaily',{}),'enabled':False},'publishActivities':False}
     day=datetime.strptime(args.as_of,'%Y-%m-%d').date() if args.as_of else None
     result=run(args.root,cfg,args.collect,day)
     print(json.dumps(result,ensure_ascii=False))

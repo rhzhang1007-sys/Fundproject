@@ -22,7 +22,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
-from public_transport import CurlPublicFetcher
+from public_transport import CurlPublicFetcher,SourceRefused
 FETCHER=CurlPublicFetcher(1,timeout=25)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,7 +34,7 @@ FIELDS = ['code', 'name', 'pinyin', 'type', 'blank', 'dayChange', 'w1', 'm1', 'm
           'y1', 'y2', 'y3', 'ytd', 'flag', 'date', 'nav', 'accNav', 'flag2', 'fee', 'n20', 'n21', 'fee2', 'fee3']
 
 
-def fetch_page(page, size, retries=4):
+def fetch_page(page, size, retries=3, expected_total=None):
     url = BASE.format(page=page, size=size)
     last = None
     for i in range(retries):
@@ -45,7 +45,12 @@ def fetch_page(page, size, retries=4):
                 raise RuntimeError('响应不含 JSON')
             payload=json.loads(match.group(0))
             if not isinstance(payload,dict) or not isinstance(payload.get('datas'),list):raise ValueError('净值批量接口结构异常')
-            return payload['datas']
+            total=int(payload.get('datacount',0));actual=int(payload.get('pageIndex',page))
+            if actual!=page:raise ValueError('净值接口未按请求翻页')
+            if len(payload['datas'])!=min(size,max(0,total-(page-1)*size)):raise ValueError('净值分页条数与来源总数不符')
+            if (expected_total is not None and total!=expected_total) or not payload['datas'] and expected_total and (page-1)*size<expected_total:raise ValueError('净值分页提前空或来源总数变动')
+            return payload['datas'],total
+        except SourceRefused:raise
         except Exception as exc:
             last = exc
             time.sleep(2 + 3 * i)
@@ -76,8 +81,12 @@ def parse_row(raw):
 
 def collect(size, max_pages, sleep):
     records, bad, pages, duplicates, seen_pages = {}, 0, 0, 0, set()
+    reported=None;errors=[];rows=[]
     for page in range(1, max_pages + 1):
-        rows = fetch_page(page, size)
+        try:rows,total=fetch_page(page,size,expected_total=reported)
+        except (ValueError,RuntimeError,OSError) as exc:
+            errors.append(str(exc)[:200]);break
+        reported=total
         pages += 1
         signature=tuple(rows)
         if rows and signature in seen_pages:raise ValueError('净值接口重复页，不能视为完成')
@@ -94,7 +103,7 @@ def collect(size, max_pages, sleep):
         if len(rows) < size:
             break
         time.sleep(sleep)
-    return records, bad, pages, duplicates, bool(rows and len(rows)>=size)
+    return records,bad,pages,duplicates,bool(errors or rows and len(rows)>=size),reported,errors
 
 
 MOBILE = ('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNNBasicInformation'
@@ -149,6 +158,18 @@ def write_atomic(path, payload):
     tmp.replace(path)
 
 
+def merge_snapshots(fresh,previous,checked_at):
+    merged={};chosen=set()
+    for row in previous.get('funds',[]):
+        try:date.fromisoformat(row['date'])
+        except (ValueError,TypeError,KeyError):continue
+        if not re.fullmatch(r'\d{6}',str(row.get('code',''))):continue
+        merged[row['code']]={**row,'fetchedAt':row.get('fetchedAt') or previous.get('fetchedAt'),'cachedObservation':True}
+    for code,row in fresh.items():
+        if code not in merged or row['date']>=merged[code]['date']:
+            merged[code]={**row,'fetchedAt':checked_at,'cachedObservation':False};chosen.add(code)
+    return merged,len(chosen),len(merged)-len(chosen)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', type=Path, default=DEFAULT_OUT)
@@ -168,10 +189,10 @@ def main():
     today = args.as_of or started.date().isoformat()
     print(f'开始采集全市场净值 {today}', flush=True)
 
-    records, bad, pages, duplicates, truncated = collect(args.size, args.max_pages, args.sleep)
+    records, bad, pages, duplicates, truncated, reported, source_errors = collect(args.size, args.max_pages, args.sleep)
 
     filled = 0
-    if args.fill_limit:
+    if args.fill_limit and not FETCHER.refused:
         if args.basics.exists():
             basic_rows = [json.loads(l) for l in args.basics.read_text(encoding='utf-8').splitlines() if l.strip()]
         else:
@@ -189,11 +210,16 @@ def main():
             records.update(extra)
             filled = len(extra)
             print(f'  补齐 {filled} 只，未及处理 {skipped} 只（时间预算 {args.fill_minutes} 分钟）', flush=True)
+    fresh_count=len(records);fresh_dates=Counter(r['date'] for r in records.values());previous_path=args.out/'latest.json'
+    try:previous=json.loads(previous_path.read_text()) if previous_path.exists() else {}
+    except (ValueError,OSError):previous={}
+    records,fresh_stored,reused=merge_snapshots(records,previous,started.isoformat(timespec='seconds'))
     counts = Counter(r['date'] for r in records.values())
     no_nav = sum(1 for r in records.values() if r['nav'] is None)
     dup = duplicates
-    status = 'ok'
-    warnings = []
+    status = 'incomplete' if reused else 'ok'
+    warnings = list(source_errors)
+    if reused:warnings.append(f'沿用 {reused} 条先前观察，保留各自日期与采集时间')
     if len(records) < args.expect_min:
         status = 'incomplete'
         warnings.append(f'条数 {len(records)} 低于预期下限 {args.expect_min}（仍保存，供核对）')
@@ -210,12 +236,12 @@ def main():
         'schemaVersion': 1,
         'asOf': today,
         'fetchedAt': started.isoformat(timespec='seconds'),
-        'source': '天天基金 FundGuideapi',
+        'source': '天天基金批量及单只接口；来源异常时合并上一有效观察',
         'sourceUrl': BASE.format(page=1, size=args.size),
         'fieldNote': 'nav=单位净值；accNav=累计净值；dayChange=日增长率（不含分红）；date 为净值日期，非抓取日。',
         'status': status,
         'warnings': warnings,
-        'meta': {'seconds': round(time.monotonic()-clock_started,3), 'pages': pages, 'records': len(records), 'badRows': bad, 'duplicateRows': dup, 'paginationTruncated': truncated, 'withoutNav': no_nav,
+        'meta': {'seconds': round(time.monotonic()-clock_started,3), 'pages': pages, 'records': len(records), 'badRows': bad, 'duplicateRows': dup, 'paginationTruncated': truncated, 'reportedBulkRows': reported, 'freshRecords': fresh_count, 'freshStoredRecords': fresh_stored, 'reusedRecords': reused, 'freshDateDistribution':dict(fresh_dates), 'sourceErrors':source_errors, 'withoutNav': no_nav,
                  'filledFromDetail': filled, 'fillBudgetMinutes': args.fill_minutes,
                  'dateDistribution': dict(sorted(counts.items(), reverse=True)[:5])},
         'funds': list(records.values())

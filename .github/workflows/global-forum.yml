@@ -15,7 +15,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: daily-public-data-collection
+  group: global-public-forum-collection
   cancel-in-progress: false
 jobs:
   continue:
@@ -46,13 +46,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python prototype/scripts/github_corpus_cache.py pull
-      - name: Resume public forum lists, text and model queue
+      - name: Resume yesterday posts and comments without model calls
         if: steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
-        env:
-          LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_MODEL: glm-5.3-flash
-          LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
         run: python prototype/scripts/global_forum.py --collect
       - name: Verify restored cursor matches corpus
         if: inputs.verify_checkpoint_only == true
