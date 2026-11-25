@@ -81,3 +81,5 @@ body.v7{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft Ya
 .v11-post-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:30rem;overflow:auto}
 
 .v13-ai{margin:0 0 24px;padding:18px 22px;background:#f2f5ef}.v13-ai h2{margin-top:0}.v13-ai textarea{min-height:58px}.v13-ai small{display:block;margin-top:10px;color:#687569}.v13-pair{padding:12px 0;border-bottom:1px solid #e0e5dc}.v13-entities{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:#4d6250}.v13-entities span{padding:3px 8px;border-radius:12px;background:#edf1e9}#target-form input{width:100px}#inline-holding-form input{max-width:180px}
+
+.v14-ai{background:#f0f3ec}.v14-ai h2{margin-top:0}.v14-ai details{margin:12px 0}.v14-ai small{color:#667361}.v14-evidence{white-space:pre-wrap;overflow-wrap:anywhere;max-height:65vh;overflow:auto;font:13px/1.7 ui-monospace,monospace}#v7-analysis-fund{min-width:260px}

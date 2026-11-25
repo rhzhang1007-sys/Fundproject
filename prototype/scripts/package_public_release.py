@@ -13,7 +13,7 @@ def build(root=ROOT):
  files+=['prototype/config/'+n for n in ['public-updates.json','llm-pricing.json','model-check-request.json','global-forum-bootstrap.json','public-source-review.json']]
  files+=['prototype/scripts/'+n for n in ['refresh_public_data.py','public_news.py','public_transport.py','market_public.py','daily_pipeline.py','prepare_v08_public_site.py','check_model_connection.py','build_global_foundation.py','global_forum.py','public_comments.py','publish_object_activity.py','news_llm_queue.py','github_corpus_cache.py','package_public_release.py','collect_nav_snapshot.py','sync_nav_observations.py','compute_daily_factors.py','update_market_observations.py','publish_news_shards.py','build_index_metrics.py','update_resolved_indices.py','sina_forum.py','forum_object.py','sync_analysis_v3.py','collect_fast_news_daily.py']]
  files+=['prototype/tests/'+n for n in ['test_public_updates.py','test_public_updates_regressions.py','test_news_pipeline.py','test_global_pipeline.py','test_global_corpus.py','v08-model.test.mjs','v08-ai.test.mjs','v09-industry.test.mjs','v09-public-data.test.mjs','v10-objects.test.mjs','web-ai-server.test.mjs','test_daily_factors.py','test_index_observations.py','test_forum_sources.py','v13-analysis.test.mjs']]
- files+=['prototype/scripts/import_overnight_data.py','prototype/tests/test_overnight_import.py','prototype/tests/v11-integration.test.mjs','prototype/dist/v09-industry.mjs']
+ files+=['prototype/scripts/import_overnight_data.py','prototype/tests/test_overnight_import.py','prototype/tests/v11-integration.test.mjs','prototype/dist/v09-industry.mjs','prototype/dist/v13-analysis.mjs','prototype/tests/v14-analysis.test.mjs','prototype/scripts/build_holdings_shards.py','prototype/tests/test_holdings_shards.py','prototype/build-analysis-view.mjs','prototype/daily-runtime.mjs','docs/持仓分析与定时更新-v7.md']
  files+=['prototype/forum-service.mjs','prototype/web-ai-server.mjs','prototype/serve.py','prototype/.env.example','prototype/requirements-daily.txt','docs/默认AI与自选AI配置.md','docs/全市场对象与定时更新架构.md','docs/持仓分析指标体系-v2.md','docs/持仓分析与信息读取-v3.md']
  for name in files:
   target=stage/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,target)
@@ -26,11 +26,11 @@ def build(root=ROOT):
 
 新闻按批量来源抓取再打标签，未归属材料保留。论坛遍历统一目录并续跑，去掉119对象白名单；帖子正文及评论按对象分片下发，按需收藏或分析，实际覆盖见data/v10/coverage.json。已建档不表示素材全部采齐。只保留30天动态；只有标题的公告不生成全文摘要。
 
-GitHub净值日更08:30、已解析指数08:40、新闻08:50（北京时间），论坛队列每20分钟继续，可能延迟。定时任务只采集新闻、帖子正文和评论，不再运行观点聚合或新闻模型。模型按用户选择在网页调用；专用prompt后续设计。后台完整语料使用Actions自带GITHUB_TOKEN保存私有draft release检查点，不会公开发布Release。新网页AI的Key仍须站方在服务端单独填写。
+GitHub净值日更08:30、已解析指数08:40、新闻08:50（北京时间），论坛队列每20分钟继续，可能延迟。定时任务只采集新闻、帖子正文和评论，不再运行观点聚合或新闻模型。模型按用户选择在网页调用；v7分析已有统一预设prompt。后台完整语料使用Actions自带GITHUB_TOKEN保存私有draft release检查点，不会公开发布Release。新网页AI的Key仍须站方在服务端单独填写。
 
 网站发布开关保持false，未修改Team Hub。已将2026-11-25验收的稳定持仓、净值观察和公告接入按需分片，默认最新一期，可切换报告日；100行上限不当成完整披露，原已核110行中报保留。缺失未补采，未修改或停止WorkBuddy采集。用户组合只留在各自浏览器。
 
-分析按v3组织为持仓重叠、风险与期限、同指数费率、目标配置。仅前十大不算重叠；金额在各自浏览器确定性计算。风险优先已核总回报，另设来源日涨跌幅观察测算，不将后者升级为已核总回报。每日净值只批量，74个已解析指数增量更新。论坛加入板块身份核对、新浪公开补充及网页按对象续读。详见docs/持仓分析与信息读取-v3.md。
+分析按v7组织为组合穿透与风险结构、基金成本与同类表现。历史指标使用通过净值口径筛查的来源观察，不升级为独立已核总回报。发现WB持仓展示分片串基金的问题，前端改用已验收持仓，未改动或运行WB采集。AI预设含五类解读和自写追问。定时增加错峰补跑及当天去重，详见docs/持仓分析与定时更新-v7.md。
 
 本包是当前代码和公开数据备份；恢复前先同步远端，不能覆盖较新的费用账本或队列指针。私有原文缓存不打入公开包，继续采集前由工作流恢复并校验。[架构和边界](docs/全市场对象与定时更新架构.md)
 ''')

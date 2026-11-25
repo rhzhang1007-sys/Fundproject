@@ -32,6 +32,6 @@ def update(root=ROOT,minutes=15,workers=3):
         if error:errors.append({'code':code,'reason':error})
         else:updated+=1
     data['checkedAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds');write(out,data)
-    report={'resolvedScope':len(data['series']),'requestedScope':len(results),'alreadyCurrent':len(data['series'])-len(results),'updated':updated,'errors':errors,'seconds':round(time.monotonic()-started,3),'newMissingIndicesRequested':0,'eligibleForFundRisk':False};write(out.parent/'index-status.json',report);return report
+    report={'attemptedAt':data['checkedAt'],'resolvedScope':len(data['series']),'requestedScope':len(results),'alreadyCurrent':len(data['series'])-len(results),'updated':updated,'errors':errors,'seconds':round(time.monotonic()-started,3),'newMissingIndicesRequested':0,'eligibleForFundRisk':False};write(out.parent/'index-status.json',report);return report
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--budget-minutes',type=float,default=15);p.add_argument('--workers',type=int,default=3);a=p.parse_args();print(json.dumps(update(minutes=a.budget_minutes,workers=a.workers),ensure_ascii=False))

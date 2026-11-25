@@ -2,7 +2,7 @@ name: Continue global forum queue
 on:
   schedule:
     # Continue every 20 minutes; one shared writer prevents overlapping budgets/commits.
-    - cron: '*/20 * * * *'
+    - cron: '7,27,47 * * * *'
   workflow_dispatch:
     inputs:
       verify_checkpoint_only:

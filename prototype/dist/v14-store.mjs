@@ -1,0 +1,12 @@
+import {objectShard} from './v10-objects.mjs';
+import {PUBLIC_DATA_BASE} from './v09-public-data.mjs';
+export function createV7Store(fetcher=fetch){
+ const cache=new Map(),local='./data/v14/',remote=PUBLIC_DATA_BASE+'v14/';let chosen;
+ async function read(base,path){const key=base+path;if(!cache.has(key))cache.set(key,(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),6000);try{const r=await fetcher(key,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:ctl.signal});if(!r.ok)throw Error('本次分析数据尚未接入');return await r.json();}finally{clearTimeout(timer);}})().catch(e=>{cache.delete(key);throw e;}));return cache.get(key);}
+ const valid=m=>m?.schemaVersion===1&&typeof m.version==='string'&&Array.isArray(m.calendar)&&m.method;
+ async function choose(){if(!chosen)chosen=(async()=>{const [a,b]=await Promise.allSettled([read(local,'manifest.json'),read(remote,'manifest.json')]),l=a.status==='fulfilled'&&valid(a.value)?a.value:null,r=b.status==='fulfilled'&&valid(b.value)?b.value:null;
+  if(r&&(!l||r.method===l.method&&(r.asOf>l.asOf||r.asOf===l.asOf&&r.builtAt>l.builtAt)))return {base:remote,manifest:r};if(l)return {base:local,manifest:l};if(r)return {base:remote,manifest:r};throw Error('本次分析数据尚未接入');})();return chosen;}
+ async function loadAt(codes,{base,manifest}){const funds={};await Promise.all(codes.map(async code=>{const k=objectShard(code),[a,b,c]=await Promise.all([read(base,'funds/'+k+'.json'),read(base,'nav/'+k+'.json'),read(base,'holdings/'+k+'.json')]);if([a,b,c].some(x=>x.version!==manifest.version||!x.funds))throw Error('分析数据正在更新，请重新读取');funds[code]={...a.funds[code],adjusted:b.funds[code],detailPeriods:c.funds[code]?.periods||[]};}));return {manifest,funds};}
+ async function load(codes){const selection=await choose();try{return await loadAt(codes,selection);}catch(e){if(selection.base===local)throw e;const manifest=await read(local,'manifest.json');if(!valid(manifest))throw e;return loadAt(codes,{base:local,manifest});}}
+ return {load,reset(){cache.clear();chosen=null;}};
+}

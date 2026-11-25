@@ -41,7 +41,7 @@ def preflight(root,config):
         modelMatchesDiscussedSelection=bool(model and model.lower() in ('glm-5.3-flashx','glm-5.3-flash')),
         providerMatchesDiscussedSelection=bool(url and urlparse(url).hostname=='api.zhizengzeng.com'),
         endpointIsChatCompletions=bool(url and urlparse(url).path.rstrip('/').endswith('/chat/completions')),
-        cronUTC='30 0 * * *',timezone='Asia/Shanghai',credentialsIncluded=False)
+        cronUTC='50 0 * * *',backupCronUTC='31 1,3 * * *',timezone='Asia/Shanghai',credentialsIncluded=False)
 
 
 def run(root,config,collect=False,as_of=None,fetch=None):

@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {val
 const sources=[{id:'report',text:'2025年度产能772GWh。',url:'https://example.com/report',date:'2026-03-10'}];
 test('三类提示各有任务，均约束数字、引用和联网声明',()=>{for(const p of Object.values(PROMPTS)){assert.match(p,/不编造/);assert.match(p,/不得声称已联网搜索/);}assert.match(PROMPTS.verify,/unverifiable/);});
 test('结构化摘要只接受输入来源与数字',()=>{assert.equal(validateAIResult(JSON.stringify({title:'摘要',points:[{text:'2025年度产能772GWh。',sourceIds:['report']}]}),'summary',sources).points.length,1);});
+test('等值的尾零和日期格式允许变化，未提供的舍入值仍被拒绝',()=>{const s=[{id:'s',text:'费率0.20%，日期2026-06-30，相似度0.628。'}];assert.doesNotThrow(()=>validateAIResult('{"points":[{"text":"2026年6月30日，费率0.2%。","sourceIds":["s"]}]}','summary',s));assert.throws(()=>validateAIResult('{"points":[{"text":"相似度0.63。","sourceIds":["s"]}]}','summary',s),/没有的数字/);});
 test('未知来源、额外数字和自行生成的URL会被拒绝',()=>{
  for(const point of [{text:'产能772',sourceIds:['unknown']},{text:'产能1000',sourceIds:['report']},{text:'https://fake.test',sourceIds:['report']}])assert.throws(()=>validateAIResult(JSON.stringify({points:[point]}),'summary',sources));
 });

@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {PROMPTS,validateAIResult} from './dist/v08-ai.mjs';
 import {createForumService} from './forum-service.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
-export const PROMPT_VERSION='web-ai-2026-11-24-v1';
+export const PROMPT_VERSION='web-ai-v7-2026-11-25';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
 export async function readServerConfig(env=process.env){
@@ -28,22 +28,23 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
  let queue=Promise.resolve();const clients=new Map();
  const forum=createForumService(HERE);
  const available=()=>Boolean(config.key&&config.model&&/^https:\/\//.test(config.url)&&config.input>0&&config.output>0&&config.budget>0&&(!config.priceReviewAfter||date()<=config.priceReviewAfter));
- async function generate(body){
+ async function generate(body,repair=null,deadline=Date.now()+90000){
   let ledger;try{ledger=JSON.parse(await readFile(config.ledger,'utf8'));}catch(e){if(e.code!=='ENOENT')throw Error('用量记录无法读取');}
   if(!ledger||ledger.date!==date())ledger={date:date(),calls:0,costCNY:0,reservedCNY:0};
   const persist=async()=>{await mkdir(path.dirname(config.ledger),{recursive:true});const tmp=config.ledger+'.tmp';await writeFile(tmp,JSON.stringify(ledger));await rename(tmp,config.ledger);};
   const messages=[{role:'system',content:PROMPTS[body.task]},{role:'user',content:JSON.stringify({materials:body.materials,question:body.question||''})}];
+  if(repair)messages.push({role:'assistant',content:repair.draft.slice(0,20000)},{role:'user',content:'上次结果未通过程序校验：'+repair.reason+'。请只用原材料里已经显示的数字和来源ID，不自行换算、四舍五入或补数据。删去无依据的内容，重新只输出规定JSON。'});
   const cap=/^glm-5\.3/i.test(config.model)?8192:1600;const reserve=(Buffer.byteLength(JSON.stringify(messages))*config.input+cap*config.output)/1e6;
   if(ledger.costCNY+ledger.reservedCNY+reserve>config.budget)throw Error('今日默认AI额度已用完，可使用自己的接口');
   ledger.calls++;ledger.reservedCNY+=reserve;await persist();
-  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),45000);
+  if(Date.now()>=deadline)throw Error('模型请求超时');const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),deadline-Date.now());
   try{
-   let response;try{response=await upstream(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});}catch(e){if(e.name==='AbortError')throw e;const code=String(e.cause?.code||e.code||'NETWORK_ERROR');console.error(JSON.stringify({stage:'model-transport',code:/^[A-Z0-9_]{1,60}$/.test(code)?code:'NETWORK_ERROR'}));throw Error('模型连接失败，请稍后重试');}
+   let response;try{response=await upstream(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,...(/^glm-5\.3/i.test(config.model)?{thinking:{type:'enabled'},reasoning_effort:'low'}:{}),temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});}catch(e){if(e.name==='AbortError')throw e;const code=String(e.cause?.code||e.code||'NETWORK_ERROR');console.error(JSON.stringify({stage:'model-transport',code:/^[A-Z0-9_]{1,60}$/.test(code)?code:'NETWORK_ERROR'}));throw Error('模型连接失败，请稍后重试');}
    if(!response.ok)throw Error('模型服务暂时不可用');
    const raw=await response.text();if(Buffer.byteLength(raw)>1000000)throw Error('模型响应过长');const value=JSON.parse(raw);
    if(value.usage&&Number.isSafeInteger(value.usage.prompt_tokens)&&value.usage.prompt_tokens>=0&&Number.isSafeInteger(value.usage.completion_tokens)&&value.usage.completion_tokens>=0){ledger.reservedCNY=Math.max(0,ledger.reservedCNY-reserve);ledger.costCNY+=(value.usage.prompt_tokens*config.input+value.usage.completion_tokens*config.output)/1e6;await persist();}
    if(value.choices?.[0]?.finish_reason==='length')throw Error('模型输出未完成，请减少所选材料');
-   let result;try{result=validateAIResult(value.choices?.[0]?.message?.content||value.output_text||'',body.task,body.materials,body.question||'');}catch(e){console.error(JSON.stringify({stage:'model-validation',reason:e.message}));throw e;}return {result,promptVersion:PROMPT_VERSION};
+   const draft=value.choices?.[0]?.message?.content||value.output_text||'';let result;try{result=validateAIResult(draft,body.task,body.materials,body.question||'');}catch(e){console.error(JSON.stringify({stage:'model-validation',reason:e.message}));if(!repair&&Date.now()+10000<deadline)return generate(body,{draft,reason:e.message},deadline);throw e;}return {result,promptVersion:PROMPT_VERSION};
   }finally{clearTimeout(timer);}
  }
  return async(req,res)=>{

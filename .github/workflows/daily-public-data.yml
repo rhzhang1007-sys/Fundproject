@@ -15,6 +15,7 @@ on:
   schedule:
     # 08:50 Asia/Shanghai; GitHub scheduling can be delayed.
     - cron: '50 0 * * *'
+    - cron: '31 1,3 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -52,7 +53,7 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_index_observations.py'
           python -m unittest discover -s prototype/tests -p 'test_forum_sources.py'
       - name: Validate website data interfaces
-        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs prototype/tests/v13-analysis.test.mjs
+        run: node --test prototype/tests/*.test.mjs
       - name: Check runtime configuration without collecting
         run: python prototype/scripts/daily_pipeline.py
       - name: Read collection switch
@@ -63,12 +64,17 @@ jobs:
           config=json.load(open('prototype/config/public-updates.json'))
           print('enabled='+('true' if config.get('enabled') is True else 'false'))
           PY
+      - name: Check today's execution marker
+        id: daily
+        run: node prototype/daily-runtime.mjs check news >> "$GITHUB_OUTPUT"
       - name: Daily public news and market facts
         id: collect
-        if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
-        run: python prototype/scripts/daily_pipeline.py --collect --news-only
+        if: github.event_name != 'push' && steps.gate.outputs.enabled == 'true' && steps.daily.outputs.run == 'true'
+        run: |
+          python prototype/scripts/daily_pipeline.py --collect --news-only
+          node prototype/daily-runtime.mjs mark news
       - name: Persist validated news, market facts and status
-        if: always() && github.event_name != 'push' && steps.gate.outputs.enabled == 'true'
+        if: always() && github.event_name != 'push' && steps.gate.outputs.enabled == 'true' && steps.daily.outputs.run == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -77,7 +83,7 @@ jobs:
           from pathlib import Path
           status=Path('prototype/dist/data/v09/update-status.json')
           ready=json.loads(status.read_text()) if status.exists() else {}
-          paths=['prototype/dist/data/v09/update-status.json']
+          paths=['prototype/dist/data/v09/update-status.json','prototype/dist/data/v14/runtime/news.json']
           if ready.get('newsReady'): paths+=['prototype/dist/data/v07/events.json','prototype/dist/data/archive','prototype/dist/data/v12/news','prototype/dist/data/v12/news-shard-status.json']
           if ready.get('marketReady'): paths+=['prototype/dist/data/v09/market-daily.json','prototype/dist/data/v09/market-history']
           existing=[p for p in paths if Path(p).exists()]
