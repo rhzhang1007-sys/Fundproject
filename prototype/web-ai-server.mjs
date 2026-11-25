@@ -10,7 +10,7 @@ const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).form
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
 export async function readServerConfig(env=process.env){
  let file={};try{for(const line of (await readFile(path.join(HERE,'.env.local'),'utf8')).split(/\r?\n/)){const m=/^(WEB_LLM_[A-Z_]+)=(.*)$/.exec(line.trim());if(m)file[m[1]]=m[2].replace(/^(['"])(.*)\1$/,'$2');}}catch{}
- const get=k=>env[k]??file[k]??'';const url=get('WEB_LLM_API_URL'),model=get('WEB_LLM_MODEL'),key=get('WEB_LLM_API_KEY');
+ const get=k=>env[k]??file[k]??'';let url=get('WEB_LLM_API_URL');try{const endpoint=new URL(url);if(endpoint.pathname==='/'||endpoint.pathname==='/v1'||endpoint.pathname==='/v1/')endpoint.pathname='/v1/chat/completions';url=endpoint.href;}catch{}const model=get('WEB_LLM_MODEL'),key=get('WEB_LLM_API_KEY');
  let input=Number(get('WEB_LLM_PRICE_IN')),output=Number(get('WEB_LLM_PRICE_OUT')),priceReviewAfter=null;
  if(!get('WEB_LLM_PRICE_IN').trim()&&!get('WEB_LLM_PRICE_OUT').trim())try{const catalog=JSON.parse(await readFile(path.join(HERE,'config/llm-pricing.json'),'utf8'));const entry=catalog.entries.find(x=>x.host===new URL(url).hostname&&x.model===model.toLowerCase());if(entry&&today()<=catalog.reviewAfter){input=entry.input;output=entry.output;priceReviewAfter=catalog.reviewAfter;}}catch{}
  let origin=get('WEB_LLM_ORIGIN').trim();if(origin){let parsed;try{parsed=new URL(origin);}catch{throw Error('WEB_LLM_ORIGIN须填网页的协议和域名；本机使用请留空');}if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)throw Error('WEB_LLM_ORIGIN不能包含路径、查询参数或认证信息');origin=parsed.origin;}
@@ -36,12 +36,12 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
   ledger.calls++;ledger.reservedCNY+=reserve;await persist();
   const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),45000);
   try{
-   const response=await upstream(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});
+   let response;try{response=await upstream(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});}catch(e){if(e.name==='AbortError')throw e;const code=String(e.cause?.code||e.code||'NETWORK_ERROR');console.error(JSON.stringify({stage:'model-transport',code:/^[A-Z0-9_]{1,60}$/.test(code)?code:'NETWORK_ERROR'}));throw Error('模型连接失败，请稍后重试');}
    if(!response.ok)throw Error('模型服务暂时不可用');
    const raw=await response.text();if(Buffer.byteLength(raw)>1000000)throw Error('模型响应过长');const value=JSON.parse(raw);
    if(value.usage&&Number.isSafeInteger(value.usage.prompt_tokens)&&value.usage.prompt_tokens>=0&&Number.isSafeInteger(value.usage.completion_tokens)&&value.usage.completion_tokens>=0){ledger.reservedCNY=Math.max(0,ledger.reservedCNY-reserve);ledger.costCNY+=(value.usage.prompt_tokens*config.input+value.usage.completion_tokens*config.output)/1e6;await persist();}
    if(value.choices?.[0]?.finish_reason==='length')throw Error('模型输出未完成，请减少所选材料');
-   const result=validateAIResult(value.choices?.[0]?.message?.content||value.output_text||'',body.task,body.materials,body.question||'');return {result,promptVersion:PROMPT_VERSION};
+   let result;try{result=validateAIResult(value.choices?.[0]?.message?.content||value.output_text||'',body.task,body.materials,body.question||'');}catch(e){console.error(JSON.stringify({stage:'model-validation',reason:e.message}));throw e;}return {result,promptVersion:PROMPT_VERSION};
   }finally{clearTimeout(timer);}
  }
  return async(req,res)=>{
@@ -59,7 +59,7 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
     const chunks=[];let size=0;for await(const c of req){size+=c.length;if(size>200000)return json(res,413,{error:'材料过长'});chunks.push(c);}
     let body;try{body=validateInput(JSON.parse(Buffer.concat(chunks).toString()));}catch(e){return json(res,400,{error:e.message});}
     const result=queue.then(()=>generate(body));queue=result.catch(()=>{});
-    try{return json(res,200,await result);}catch(e){const allowed=['用量记录无法读取','今日默认AI额度已用完，可使用自己的接口','模型服务暂时不可用','模型响应过长','模型输出未完成，请减少所选材料'];const message=allowed.includes(e.message)?e.message:e.name==='AbortError'?'请求超时':'模型结果未通过来源校验，请重试';return json(res,502,{error:message});}
+    try{return json(res,200,await result);}catch(e){const allowed=['模型连接失败，请稍后重试','用量记录无法读取','今日默认AI额度已用完，可使用自己的接口','模型服务暂时不可用','模型响应过长','模型输出未完成，请减少所选材料'];const message=allowed.includes(e.message)?e.message:e.name==='AbortError'?'请求超时':'模型结果未通过来源校验，请重试';return json(res,502,{error:message});}
    }
    if(url.pathname.startsWith('/api/'))return json(res,404,{error:'接口不存在'});
    if(!['GET','HEAD'].includes(req.method))return json(res,405,{error:'请求方式不支持'});

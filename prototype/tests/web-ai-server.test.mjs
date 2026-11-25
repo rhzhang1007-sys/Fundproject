@@ -12,3 +12,5 @@ test('模型增加未提供数字不能作为共享AI结果返回',async()=>fixt
 test('过期价格参考不会继续开放共享AI付费接口',async()=>fixture(async({base})=>{assert.equal((await(await request(base+'/api/ai/status')).json()).sharedAvailable,false);assert.equal((await post(base)).status,503);},{priceReviewAfter:'2000-01-01'}));
 
 test('origin使用网页来源，本机留空，路径或认证信息不被接受',async()=>{const env={WEB_LLM_API_KEY:'',WEB_LLM_API_URL:'',WEB_LLM_MODEL:'',WEB_LLM_ORIGIN:''};assert.equal((await readServerConfig(env)).origin,'');assert.equal((await readServerConfig({...env,WEB_LLM_ORIGIN:'https://fund.example.com/'})).origin,'https://fund.example.com');await assert.rejects(()=>readServerConfig({...env,WEB_LLM_ORIGIN:'https://fund.example.com/api/ai'}),/不能包含路径/);await assert.rejects(()=>readServerConfig({...env,WEB_LLM_ORIGIN:'https://user:password@fund.example.com'}),/认证信息/);});
+
+test('站方只填写API站点或v1根地址时自动补全接口路径',async()=>{for(const url of ['https://api.example.com','https://api.example.com/v1/','https://api.example.com/v1/chat/completions']){const c=await readServerConfig({WEB_LLM_API_KEY:'',WEB_LLM_API_URL:url,WEB_LLM_MODEL:'test',WEB_LLM_ORIGIN:''});assert.equal(c.url,'https://api.example.com/v1/chat/completions');}});

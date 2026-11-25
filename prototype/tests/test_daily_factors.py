@@ -2,9 +2,10 @@ import json,math,sys,tempfile,unittest
 from pathlib import Path
 from datetime import date,timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from compute_daily_factors import structure,portfolio_risk,expected_shortfall,historical_path,aligned_returns
+from compute_daily_factors import structure,portfolio_risk,expected_shortfall,historical_path,aligned_returns,capture_ratios,tracking_metrics
 from collect_nav_snapshot import parse_row
 from sync_nav_observations import sync
+from update_market_observations import parse as market_parse
 from build_global_foundation import write,shard
 
 class FactorTests(unittest.TestCase):
@@ -31,6 +32,13 @@ class FactorTests(unittest.TestCase):
   self.assertEqual(aligned_returns(dict(verified=False,basis='unit-nav'),[], '2026-11-24')[1],'verified-total-return-required')
   s=dict(verified=True,basis='nav-total-return',currency='CNY',points=[dict(date='2026-11-23',value=1),dict(date='2026-11-24',value=2),dict(date='2026-11-25',value=100)])
   rows,why=aligned_returns(s,['2026-11-23','2026-11-24','2026-11-25'],'2026-11-24');self.assertIsNone(why);self.assertEqual(len(rows),1);self.assertEqual(rows[0]['values'],[1])
+ def test_calendar_and_index_exclude_future_days_and_reject_duplicates(self):
+  payload={'data':{'klines':['2026-11-24,10','2026-11-25,20']}}
+  self.assertEqual(market_parse(payload,'2026-11-24'),['2026-11-24']);self.assertEqual(market_parse(payload,'2026-11-24',True),[['2026-11-24',10.]])
+  with self.assertRaises(ValueError):market_parse({'data':{'klines':['2026-11-24,1','2026-11-24,2']}},'2026-11-24',True)
+ def test_benchmark_uses_compound_returns_and_sample_error(self):
+  r=capture_ratios([[.1,.05],[-.1,-.2],[.2,.1]]);self.assertAlmostEqual(r['up'],.32/.155);self.assertAlmostEqual(r['down'],.5)
+  t=tracking_metrics([[.1,.05],[.2,.1]]);self.assertAlmostEqual(t['trackingDifference'],1.1*1.2-1.05*1.1);self.assertAlmostEqual(t['trackingError'],math.sqrt(.00125*252))
  def test_nav_invalid_date_and_snapshot_merge_preserves_newer(self):
   raw=['000001','基金','','股票型','','0']+['']*9+['2026-02-30','1','1']+['']*6
   self.assertIsNone(parse_row(','.join(raw)))

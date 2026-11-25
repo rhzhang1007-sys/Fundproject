@@ -3,7 +3,7 @@
 A NAV observation is NOT a verified total-return series. Missing adjustment/history
 never becomes zero risk. This program does not fetch dividends or fabricate returns.
 """
-import argparse,json,math,time
+import argparse,json,math,time,re
 from collections import Counter
 from datetime import date,datetime,timedelta
 from pathlib import Path
@@ -32,7 +32,7 @@ def structure(funds,weights):
             if not code or code in seen or not number(v) or not 0<=v<=100:return dict(ready=False,reason='invalid-or-duplicate-position',asOf=as_of)
             seen.add(code);positions[code]=positions.get(code,0)+w*v/100
     positions={c:v for c,v in positions.items() if v>0};coverage=sum(positions.values())
-    if coverage<.5 or coverage>1+1e-6:return dict(ready=False,reason='disclosure-coverage-below-50-percent' if coverage<.5 else 'invalid-disclosure-denominator',asOf=as_of,coverage=coverage)
+    if coverage<.5:return dict(ready=False,reason='disclosure-coverage-below-50-percent',asOf=as_of,coverage=coverage)
     hhi=sum((v/coverage)**2 for v in positions.values());effective=1/hhi
     return dict(ready=True,asOf=as_of,coverage=coverage,complete=all(p.get('complete') is True for p in selected),nominal=len(positions),effective=effective,hhi=hhi,multiple=len(positions)/effective,top5=sum(sorted(positions.values(),reverse=True)[:5])/coverage,maximumExposure=max(positions.values()),basis='observed-holdings-normalized-within-disclosed-part')
 
@@ -73,6 +73,21 @@ def historical_path(rows,weights):
     recovery=next((d for d,v in points if d>trough and v>=event_value-1e-12),None) if max_dd>1e-12 else points[0][0]
     return dict(ready=True,fromDate=points[0][0],to=points[-1][0],totalReturn=points[-1][1]-1,maxDrawdown=max_dd,peakDate=event_peak,troughDate=trough,recoveryDate=recovery,recoveryDays=(date.fromisoformat(recovery)-date.fromisoformat(trough)).days if recovery else None,rule='initial-weights-buy-and-hold')
 
+def capture_ratios(rows):
+    if any(len(r)!=2 or any(not number(x) or x<=-1 for x in r) for r in rows):raise ValueError('Invalid benchmark pairs')
+    def one(sign):
+        selected=[r for r in rows if sign*r[1]>0]
+        if not selected:return None
+        b=math.prod(1+r[1] for r in selected)-1
+        return (math.prod(1+r[0] for r in selected)-1)/b if abs(b)>1e-12 else None
+    return dict(up=one(1),down=one(-1))
+
+def tracking_metrics(rows):
+    if len(rows)<2:return dict(ready=False,reason='benchmark-history-missing')
+    if any(len(r)!=2 or any(not number(x) or x<=-1 for x in r) for r in rows):raise ValueError('Invalid benchmark pairs')
+    differences=[a-b for a,b in rows];mean=sum(differences)/len(rows)
+    return dict(ready=True,trackingError=math.sqrt(sum((x-mean)**2 for x in differences)/(len(rows)-1)*252),trackingDifference=math.prod(1+r[0] for r in rows)-math.prod(1+r[1] for r in rows))
+
 def aligned_returns(series,calendar,as_of):
     if series.get('verified') is not True or series.get('basis')!='nav-total-return' or series.get('currency')!='CNY':return [],'verified-total-return-required'
     points=series.get('points',[]);observed={}
@@ -98,18 +113,20 @@ def build(root=ROOT,as_of=None):
     started=time.monotonic();root=Path(root);dist=root/'prototype/dist/data';as_of=as_of or (datetime.now(ZoneInfo('Asia/Shanghai')).date()-timedelta(days=1)).isoformat()
     date.fromisoformat(as_of);registry=[o for o in load(dist/'v10/objects.json')['objects'] if o['kind']=='fund']
     analytics=load(dist/'analytics.json');series={s['id']:s for s in analytics.get('series',[])};calendar=load(dist/'v11/market.json').get('calendar',{}).get('dates',[])
-    groups={};counts=Counter();cache={}
+    groups={};counts=Counter();cache={};profiles={}
     for obj in registry:
         code=obj['code'];key=shard(code)
         if key not in cache:
             rel=dist/'v11/relationships'/f'{key}.json';obs=dist/'v11/observations'/f'{key}.json'
             cache[key]=(load(rel).get('funds',{}) if rel.exists() else {},load(obs).get('funds',{}) if obs.exists() else {})
+            profile_path=dist/'v10/foundation/funds'/f'{key}.json';profiles[key]={p['code']:p for p in load(profile_path).get('cards',[])} if profile_path.exists() else {}
         rels,observations=cache[key];observation=observations.get(code,{})
         snap=observation.get('snapshot');snap=snap if snap and snap.get('date','')<=as_of else None
         # Use the last actual observation not newer than the cutoff, never a future row.
         history=[p for p in observation.get('history',{}).get('points',[]) if p[0]<=as_of]
         if not snap and history:
             p=max(history,key=lambda p:p[0]);snap=dict(code=code,date=p[0],nav=p[1],accNav=p[2] if len(p)>2 else None,dayChange=p[3] if len(p)>3 else None)
+        profile=profiles[key].get(code,{})
         row=dict(id=obj['id'],code=code,asOf=as_of,version=VERSION,navObservation=snap,navBasis='unadjusted-source-observation',structure=structure([rels.get(code,{})],[1.]))
         if snap:counts['withNav']+=1;counts['navOnCutoff']+=snap['date']==as_of
         counts['structureReady']+=row['structure']['ready']
@@ -118,6 +135,23 @@ def build(root=ROOT,as_of=None):
         row['risk']=dict(ready=False,reason=reason) if reason else portfolio_risk([r['values'] for r in rows],[1.])
         p=historical_path(rows,[1.]) if rows else dict(ready=False,reason=reason or 'no-history')
         if p.get('ready') and (date.fromisoformat(p['to'])-date.fromisoformat(p['fromDate'])).days<365:p=dict(ready=False,reason='less-than-one-year-history')
+        if p.get('ready'):
+            try:old_enough=(date.fromisoformat(p['to'])-date.fromisoformat(profile.get('establishedAt',''))).days>=365
+            except (TypeError,ValueError):old_enough=False
+            if not old_enough:p=dict(ready=False,reason='inception-missing-or-less-than-one-year')
+        fees=[]
+        for part in ['management','custody','service']:
+            v=profile.get('fees',{}).get(part);v=v.get('annualDecimal') if isinstance(v,dict) and number(v.get('annualDecimal')) else v.get('rawPercentValue')/100 if isinstance(v,dict) and number(v.get('rawPercentValue')) else float(v.strip()[:-1])/100 if isinstance(v,str) and re.fullmatch(r'\s*\d+(?:\.\d+)?\s*%\s*',v) else None;fees.append(v)
+        row['cost']=dict(annualFee=sum(fees) if all(number(v) and v>=0 for v in fees) else None,basis='source-fee-fields',feeReturnRatio=None)
+        if p.get('ready') and p['totalReturn']>0 and row['cost']['annualFee'] is not None:row['cost']['feeReturnRatio']=row['cost']['annualFee']*(date.fromisoformat(p['to'])-date.fromisoformat(p['fromDate'])).days/365/p['totalReturn']
+        def paired(index):
+            if not index or not index.get('verified') or index.get('basis') not in ('total-return','price-return'):return []
+            benchmark,why=aligned_returns({**index,'basis':'nav-total-return'},calendar,as_of);other={(r['from'],r['date']):r['values'][0] for r in benchmark}
+            pairs=[dict(**r,values=[r['values'][0],other[(r['from'],r['date'])]]) for r in rows if (r['from'],r['date']) in other]
+            return pairs if len(pairs)>=200 and all(not i or r['from']==pairs[i-1]['date'] for i,r in enumerate(pairs)) else []
+        product=next((v for v in analytics.get('products',[]) if v.get('fundId')==obj['id']),{});index=next((v for v in analytics.get('indices',[]) if v.get('id')==product.get('benchmarkId')),None);pairs=paired(index)
+        row['tracking']={**tracking_metrics([r['values'] for r in pairs]),'benchmarkId':product.get('benchmarkId'),'benchmarkBasis':index.get('basis') if index else None}
+        market_index=next((v for v in analytics.get('indices',[]) if v.get('id')==analytics.get('marketReference')),None);pairs=paired(market_index);row['capture']=dict(ready=bool(pairs),**capture_ratios([r['values'] for r in pairs]),benchmarkBasis=market_index.get('basis') if market_index else None)
         row['pressure']=p;counts['riskReady']+=row['risk']['ready'];counts['pressureReady']+=p['ready']
         groups.setdefault(key,dict(schemaVersion=1,funds={} ))['funds'][code]=row
     for key,payload in groups.items():write(dist/'v12/factors'/f'{key}.json',payload)

@@ -29,7 +29,7 @@ if __name__ == '__main__':
         node=str(candidates[-1]) if candidates else shutil.which('node')
         if node:
             env={**os.environ,'PORT':str(args.port)}
-            try:raise SystemExit(subprocess.call([node,str(Path(__file__).resolve().parent/'web-ai-server.mjs')],env=env))
+            try:raise SystemExit(subprocess.call([node,*[flag for flag in ['--use-system-ca','--use-env-proxy'] if flag in subprocess.check_output([node,'--help'],text=True)],str(Path(__file__).resolve().parent/'web-ai-server.mjs')],env=env))
             except KeyboardInterrupt:raise SystemExit(0)
     root = project / 'output/持仓知见-TeamHub接入包-当前/dist' if args.team_hub else Path(__file__).resolve().parent / 'dist'
     if not (root / 'index.html').is_file():
