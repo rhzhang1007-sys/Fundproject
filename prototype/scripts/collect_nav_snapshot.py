@@ -8,7 +8,7 @@
 - 幂等：同一天重复执行覆盖当天文件，不追加。
 - 原子写：先写临时文件再改名，中断不会留下半份数据。
 - 完整性校验：应得条数与实际条数、缺净值条数、重复代码数全部写入 meta。
-- 口径：保留单位净值与累计净值原值；日增长率不含分红，跨分红日不可直接用。
+- 口径：保留单位净值与累计净值原值；来源日增长率的分红与折算处理未经独立核验。
 - 只保存当日快照；历史序列另行按需回补，避免仓库体积失控。
 """
 import argparse
@@ -244,11 +244,11 @@ def main():
         'fetchedAt': started.isoformat(timespec='seconds'),
         'source': '天天基金批量及单只接口；来源异常时合并上一有效观察',
         'sourceUrl': BASE.format(page=1, size=args.size),
-        'fieldNote': 'nav=单位净值；accNav=累计净值；dayChange=日增长率（不含分红）；date 为净值日期，非抓取日。',
+        'fieldNote': 'nav=单位净值；accNav=累计净值；dayChange=来源日增长率（分红、折算处理未经独立核验）；date 为净值日期，非抓取日。',
         'status': status,
         'warnings': warnings,
         'meta': {'seconds': round(time.monotonic()-clock_started,3), 'pages': pages, 'records': len(records), 'badRows': bad, 'duplicateRows': dup, 'paginationTruncated': truncated, 'reportedBulkRows': reported, 'freshRecords': fresh_count, 'freshStoredRecords': fresh_stored, 'reusedRecords': reused, 'freshDateDistribution':dict(fresh_dates), 'sourceErrors':source_errors, 'withoutNav': no_nav,
-                 'filledFromDetail': filled, 'fillBudgetMinutes': args.fill_minutes,
+                 'filledFromDetail': filled, 'fillBudgetMinutes': args.fill_minutes if args.fill_limit else 0,
                  'dateDistribution': dict(sorted(counts.items(), reverse=True)[:5])},
         'funds': list(records.values())
     }
