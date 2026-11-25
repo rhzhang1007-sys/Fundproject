@@ -4,6 +4,11 @@ on:
     # Continue every 20 minutes; one shared writer prevents overlapping budgets/commits.
     - cron: '*/20 * * * *'
   workflow_dispatch:
+    inputs:
+      verify_checkpoint_only:
+        description: 'Only verify the saved corpus can resume; no collection or model calls'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['prototype/config/global-forum-bootstrap.json']
@@ -42,21 +47,38 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: python prototype/scripts/github_corpus_cache.py pull
       - name: Resume public forum lists, text and model queue
-        if: steps.gate.outputs.enabled == 'true'
+        if: steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
         env:
           LLM_API_URL: https://api.zhizengzeng.com/v1/chat/completions
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: glm-5.3-flash
           LLM_DAILY_BUDGET: ${{ vars.LLM_DAILY_BUDGET || '5' }}
         run: python prototype/scripts/global_forum.py --collect
+      - name: Verify restored cursor matches corpus
+        if: inputs.verify_checkpoint_only == true
+        run: |
+          python - <<'PYTHON'
+          import json
+          from pathlib import Path
+          p=Path('prototype/dist/data/v10')
+          pointer=json.loads((p/'corpus-pointer.json').read_text())
+          marker=json.loads(Path('prototype/.public-corpus/checkpoint.json').read_text())
+          assert pointer['sha256']==marker['sha256']
+          files=list(Path('prototype/.public-corpus/activity').glob('*/*.json'))
+          objects={k for f in files for k in json.loads(f.read_text())['objects']}
+          state=json.loads((p/'forum-state.json').read_text())
+          completed=[k for k,v in state['objects'].items() if v.get('throughDay')]
+          assert all(k in objects for k in completed),'Cursor is ahead of restored material'
+          print(json.dumps(dict(status='restore-and-cursor-verified',files=len(files),objects=len(objects),completedObjects=len(completed),collectionUsed=False,modelUsed=False)))
+          PYTHON
       - name: Save and verify private corpus checkpoint
         id: corpus_save
-        if: always() && steps.corpus_restore.outcome == 'success'
+        if: always() && steps.corpus_restore.outcome == 'success' && inputs.verify_checkpoint_only != true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python prototype/scripts/github_corpus_cache.py push
       - name: Persist checkpoints and cumulative budget
-        if: always() && steps.gate.outputs.enabled == 'true'
+        if: always() && steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
         env:
           CORPUS_SAVED: ${{ steps.corpus_save.outcome }}
         run: |
