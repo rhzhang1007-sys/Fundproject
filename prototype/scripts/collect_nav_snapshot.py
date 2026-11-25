@@ -110,6 +110,19 @@ MOBILE = ('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNNBasicInformation'
           '?FCODE={code}&deviceid=fundproject&plat=Android&product=EFund&version=6.2.8')
 
 
+def parse_mobile(code,data):
+    if not isinstance(data,dict) or str(data.get('FCODE') or code)!=code:return None
+    day=str(data.get('FSRQ') or '')[:10]
+    try:date.fromisoformat(day)
+    except ValueError:return None
+    def num(value):
+        try:v=float(value)
+        except (TypeError,ValueError):return None
+        return v if math.isfinite(v) else None
+    nav=num(data.get('DWJZ'))
+    if nav is None or nav<=0:return None
+    return dict(code=code,name=data.get('SHORTNAME') or '',type=data.get('FTYPE') or '',date=day,nav=nav,accNav=num(data.get('LJJZ')),dayChange=num(data.get('RZDF')),filledFrom='fund-basic')
+
 def fill_missing(codes, sleep=0.05, workers=10, minutes=20):
     """批量列表不含场内 ETF/LOF，用单只详情接口补齐单位净值。"""
     import threading
@@ -131,16 +144,9 @@ def fill_missing(codes, sleep=0.05, workers=10, minutes=20):
                     with lock:skipped['n']+=1
                     return
                 data=json.loads(FETCHER(MOBILE.format(code=code))).get('Datas') or {}
-            nav, day, acc, chg = data.get('DWJZ'), data.get('FSRQ'), data.get('LJJZ'), data.get('RZDF')
-            if not nav or not day:
-                return
-            with lock:
-                found[code] = {'code': code, 'name': data.get('SHORTNAME') or '',
-                               'type': data.get('FTYPE') or '', 'date': day,
-                               'nav': float(nav),
-                               'accNav': float(acc) if acc not in (None, '', '--') else None,
-                               'dayChange': float(chg) if chg not in (None, '', '--') else None,
-                               'filledFrom': 'fund-basic'}
+            row=parse_mobile(code,data)
+            if row:
+                with lock:found[code]=row
         except Exception:
             return
         finally:

@@ -49,7 +49,7 @@ export function benchmarkV2(model,data={}){
 }
 export function annualFee(f){
  const fees=f.profile?.fees||{};const value=x=>{if(Number.isFinite(x?.annualDecimal))return x.annualDecimal;if(Number.isFinite(x?.rawPercentValue))return x.rawPercentValue/100;const m=typeof x==='string'&&/^\s*(\d+(?:\.\d+)?)\s*%\s*$/.exec(x);return m?Number(m[1])/100:null;};
- const parts=['management','custody','service'].map(k=>value(fees[k]));return parts.every(Number.isFinite)?parts.reduce((s,v)=>s+v,0):null;
+ const parts=['management','custody','service'].map(k=>value(fees[k]??(k==='service'?fees.salesService:null)));return parts.every(Number.isFinite)?parts.reduce((s,v)=>s+v,0):null;
 }
 export function factorEvidence(model,data={}){
  const s=structureV2(model),r=riskV2(model,data),b=benchmarkV2(model,data),lines=['确定性计算结果。以下比例来自当前选择的组合，不包含持仓金额。'];

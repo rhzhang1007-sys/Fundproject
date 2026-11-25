@@ -8,6 +8,7 @@ const options=(items,value)=>items.map(([key,label])=>`<option value="${h(key)}"
 const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
 export function createLibrary(api){
  let entries=[],spaces=[],tags=[],urls=[],pending=[],editing=null,favorite=null;
+ const chosen=new Set();
  const f={folder:'全部',tag:'全部',query:''};
  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{api.toast('保存失败，请导出备份');return false;}};
  function reloadLibrary(){
@@ -28,7 +29,7 @@ export function createLibrary(api){
     return `<div class="v7-toolbar"><label>搜索信息库<input data-r-filter="query" value="${h(f.query)}" placeholder="标题、摘录、笔记或标签"></label>${action('add-note','添加内容')}${action('export-notes','导出文字与图片')}${action('import-notes','导入信息库')}<input id="r-notebook-file" type="file" accept="application/json,.json" hidden></div>
       <div class="v7-library"><aside><h3>分类</h3>${['全部',...spaces].map(s=>action('folder',s,s,f.folder===s?'v7-btn primary':'v7-btn')).join('')}${action('new-space','新建分类')}<h3>分类标签</h3>${['全部',...tags].map(t=>action('tag',t==='全部'?'全部标签':'# '+t,t,f.tag===t?'v7-btn primary':'v7-btn')).join('')}${action('new-tag','新建标签')}</aside><div>
       <p class="v7-cap">${rows.length} 条收藏</p>
-      ${rows.map(n=>`<article class="v7-card"><p class="v7-cap">${h(n.folder)} · ${date(n.updatedAt)}</p><h2>${h(n.title)}</h2>${n.excerpt?`<p class="v7-comment">${h(n.excerpt)}</p>`:''}
+      ${rows.map(n=>`<article class="v7-card"><label><input type="checkbox" data-library-pick="${h(n.id)}" ${chosen.has(n.id)?'checked':''}>选择分析</label><p class="v7-cap">${h(n.folder)} · ${date(n.updatedAt)}</p><h2>${h(n.title)}</h2>${n.excerpt?`<p class="v7-comment">${h(n.excerpt)}</p>`:''}
         ${n.images.length?`<div class="v7-images">${n.images.map(id=>`<button data-r="image" data-id="${h(id)}"><img data-r-image="${h(id)}" alt="收藏图片"></button>`).join('')}</div>`:''}
         ${n.analysisContext?`<details><summary>保存时的分析依据</summary><p>${h(n.analysisContext.objectName)} · ${h(n.analysisContext.recordLabel)}<br>报告日：${h(n.analysisContext.reportDates?.join(' / ')||'未保存')}<br>方法：${h(n.analysisContext.methodVersion||'未保存')}<br>资料版本：${h(n.analysisContext.dataVersion||'未保存')}</p></details>`:''}
         ${n.note?`<div class="v7-note"><strong>我的笔记</strong><p class="v7-comment">${h(n.note)}</p></div>`:''}<p class="v7-cap">${splitTags(n.tags).map(t=>'# '+h(t)).join(' ')}</p>
@@ -104,7 +105,7 @@ export function createLibrary(api){
   if(act==='export-notes')return exportNotes();if(act==='import-notes')document.querySelector('#r-notebook-file').click();
  }
  document.addEventListener('click',e=>{click(e).catch(err=>api.toast(err.message));});
- document.addEventListener('change',e=>{const key=e.target.dataset.rFilter;if(key){f[key]=e.target.value;api.render();}if(e.target.id==='r-images')addFiles(e.target.files);if(e.target.id==='r-notebook-file'&&e.target.files[0])importNotes(e.target.files[0]);});
+ document.addEventListener('change',e=>{if(e.target.dataset.libraryPick){e.target.checked?chosen.add(e.target.dataset.libraryPick):chosen.delete(e.target.dataset.libraryPick);return;}const key=e.target.dataset.rFilter;if(key){f[key]=e.target.value;api.render();}if(e.target.id==='r-images')addFiles(e.target.files);if(e.target.id==='r-notebook-file'&&e.target.files[0])importNotes(e.target.files[0]);});
  document.addEventListener('submit',e=>{
   if(e.target.id==='r-note-form'){e.preventDefault();saveNote(e.target);}
   if(e.target.id==='r-name-form'){e.preventDefault();const name=new FormData(e.target).get('name').trim();if(!name)return;const space=e.target.dataset.kind==='new-space',list=space?spaces:tags;if(!list.includes(name))list.push(name);if(save(space?'zhijian-spaces-v2':'zhijian-tags-v2',list)){if(space)f.folder=name;else f.tag=name;api.close();api.showNotebook();}}
@@ -113,5 +114,5 @@ export function createLibrary(api){
  document.addEventListener('paste',e=>{if(!document.querySelector('#r-note-form'))return;const files=[...(e.clipboardData?.files||[])];if(files.some(x=>x.type.startsWith('image/'))){e.preventDefault();addFiles(files);}});
  document.addEventListener('dragover',e=>{if(document.querySelector('#r-note-form'))e.preventDefault();});document.addEventListener('drop',e=>{if(document.querySelector('#r-note-form')){e.preventDefault();addFiles([...e.dataTransfer.files]);}});
  function afterRender(){for(const u of urls)URL.revokeObjectURL(u);urls=[];if(api.isNotebook())hydrate();}
- reloadLibrary();return {notebookView,afterRender,collect,edit:editor,materials:()=>{reloadLibrary();return entries;}};
+ reloadLibrary();return {notebookView,afterRender,collect,edit:editor,analysisMaterials:()=>{reloadLibrary();return entries.filter(n=>chosen.has(n.id)).slice(0,29).map(n=>({id:'private-'+n.id,text:[n.title,n.excerpt,n.note].filter(Boolean).join('\n\n'),url:safeUrl(n.url),date:date(n.updatedAt)}));},materials:()=>{reloadLibrary();return entries;}};
 }

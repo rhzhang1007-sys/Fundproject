@@ -29,6 +29,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
     state_path=dist/'v10/forum-state.json';state=load(state_path) if state_path.exists() else dict(schemaVersion=1,cursor=0,detailCursor=0,objects={})
     if state.get('cooldownUntil','')>now:return dict(status='source-cooldown',scope=len(registry),cooldownUntil=state['cooldownUntil'])
     deadline=deadline or time.monotonic()+int(settings.get('batchSeconds',900))
+    live_fetch=fetch is None
     fetch=fetch or CurlPublicFetcher(config.get('requestIntervalSeconds',1),deadline=deadline)
     u.LLM_DEADLINE=deadline;u.MODEL_CIRCUIT_ERROR=None;u.LLM_LIVE_BILLING=True
     # Billing follows the real call date, not an old observation/backfill date.
@@ -72,6 +73,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                     if raw and signature==scan.get('lastSignature'):raise ValueError('Repeated forum source page')
                     dates=[];ordered=True;last=scan.get('lastDate')
                     for x in raw:
+                        if not u.forum_native(x,code):continue
                         if x.get('post_top_status') in (None,0):
                             date=str(x.get('post_publish_time',''))[:10];datetime.strptime(date,'%Y-%m-%d')
                             if last and date>last:ordered=False
@@ -118,6 +120,21 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
         checkpoint()
         # Bodies/comments are public-source work. They must never depend on a model,
         # a minimum post count, or completion of pagination for that object.
+        # A separate public provider improves A-share coverage; per-source state
+        # lives in the same private corpus checkpoint as the collected material.
+        from forum_object import collect as collect_object
+        extra_end=min(deadline-60,time.monotonic()+120)
+        stock_queue=[x for x in stocks if x['code'].startswith(('0','3','6'))]
+        for _ in range(2 if live_fetch else 0):
+            if not stock_queue or time.monotonic()>extra_end-30:break
+            cursor=state.get('sinaCursor',0)%len(stock_queue);obj=stock_queue[cursor];state['sinaCursor']=cursor+1
+            forum=activity(obj);initial=forum.get('sinaSnapshot')
+            try:
+                result=collect_object(root,obj['id'],target,min(55,int(extra_end-time.monotonic())),providers=('sina',),initial=initial if initial and initial.get('date')==target else None)
+                forum['sinaSnapshot']=result
+                existing={r['id']:r for r in forum['records']};existing.update({r['id']:r for r in result['records']})
+                forum['records']=list(existing.values());checkpoint()
+            except (ValueError,RuntimeError,OSError) as exc:errors.append(dict(objectId=obj['id'],stage='sina',reason=str(exc)[:160]))
         candidates=[obj for obj in registry if obj['id'] in state['objects']]
         news_model_status={'status':'separate-news-job'}
         for _ in range(min(len(candidates),int(settings.get('detailObjectsPerBatch',30)))):

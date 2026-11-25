@@ -28,3 +28,7 @@ test('帖子分片有正文与评论，并防止串基金股票身份',()=>{
  const value={schemaVersion:1,objectId:'fund516160',records:[{id:'1',objectId:'fund516160',date:'2026-11-24',url:'https://guba.eastmoney.com/news,of516160,1.html',content:'原文',comments:[{id:'2',text:'评论'}]}]};
  assert.equal(validatePublicData('v12/posts/funds/516160.json',value).records[0].comments.length,1);assert.throws(()=>validatePublicData('v12/posts/stocks/516160.json',value));
 });
+
+test('独立新闻分片保持基金股票身份和真实更新时间',()=>{const value={schemaVersion:1,lastCheckedAt:'2026-11-25T11:00:00+08:00',objects:{fund000001:{news:[]}}};assert.match(publicDataUrl('v12/news/funds/01.json'),/v12\/news/);assert.equal(validatePublicData('v12/news/funds/01.json',value).lastCheckedAt,value.lastCheckedAt);assert.throws(()=>validatePublicData('v12/news/stocks/01.json',value));});
+
+test('帖子按对象和日期保留30条，合并元数据不抹掉正文评论',async()=>{const {mergePosts}=await import('../dist/v09-public-data.mjs');const a=Array.from({length:30},(_,i)=>({id:String(i),objectId:'fund1',date:'2026-11-24',content:'原始正文',comments:[{id:'c',text:'评论'}],coverage:{body:'complete',comments:'complete'}}));const b=Array.from({length:30},(_,i)=>({id:String(i),objectId:'stock2',date:'2026-11-24'}));assert.equal(mergePosts(a,b).length,60);const r=mergePosts(a,[{id:'0',objectId:'fund1',date:'2026-11-24'}]).find(x=>x.id==='0');assert.equal(r.content,'原始正文');assert.equal(r.comments.length,1);});

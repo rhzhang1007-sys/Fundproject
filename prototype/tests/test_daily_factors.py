@@ -3,8 +3,9 @@ from pathlib import Path
 from datetime import date,timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from compute_daily_factors import structure,portfolio_risk,expected_shortfall,historical_path,aligned_returns,capture_ratios,tracking_metrics
-from collect_nav_snapshot import parse_row,merge_snapshots,collect
+from collect_nav_snapshot import parse_row,parse_mobile,merge_snapshots,collect
 from unittest.mock import patch
+from publish_news_shards import publish as publish_news
 from sync_nav_observations import sync
 from update_market_observations import parse as market_parse
 from build_global_foundation import write,shard
@@ -41,6 +42,13 @@ class FactorTests(unittest.TestCase):
  def test_benchmark_uses_compound_returns_and_sample_error(self):
   r=capture_ratios([[.1,.05],[-.1,-.2],[.2,.1]]);self.assertAlmostEqual(r['up'],.32/.155);self.assertAlmostEqual(r['down'],.5)
   t=tracking_metrics([[.1,.05],[.2,.1]]);self.assertAlmostEqual(t['trackingDifference'],1.1*1.2-1.05*1.1);self.assertAlmostEqual(t['trackingError'],math.sqrt(.00125*252))
+ def test_mobile_nav_rejects_identity_and_nonfinite_values(self):
+  valid={'FCODE':'516160','FSRQ':'2026-11-24','DWJZ':'1.2','LJJZ':'NaN','RZDF':'--'};r=parse_mobile('516160',valid);self.assertEqual(r['nav'],1.2);self.assertIsNone(r['accNav']);self.assertIsNone(r['dayChange'])
+  self.assertIsNone(parse_mobile('515700',valid));self.assertIsNone(parse_mobile('516160',{**valid,'DWJZ':'NaN'}));self.assertIsNone(parse_mobile('516160',{**valid,'FSRQ':'2026-02-30'}))
+ def test_news_writer_only_updates_its_own_shards(self):
+  with tempfile.TemporaryDirectory() as t:
+   root=Path(t);d=root/'prototype/dist/data';write(d/'v10/objects.json',{'objects':[{'id':'fund000001'},{'id':'stock000001'}]});write(d/'v10/forum-state.json',{'keep':True});write(d/'v07/events.json',{'lastCheckedAt':'2026-11-25T10:00:00+08:00','events':[{'id':'a','entities':[{'kind':'fund','code':'000001'}]}]})
+   publish_news(root);self.assertIn('fund000001',json.loads((d/'v12/news/funds/01.json').read_text())['objects']);self.assertEqual(json.loads((d/'v12/news/stocks/01.json').read_text())['objects'],{});self.assertEqual(json.loads((d/'v10/forum-state.json').read_text()),{'keep':True})
  def test_early_bulk_failure_keeps_prefix_and_cached_observation_dates(self):
   from collect_nav_snapshot import collect
   with patch('collect_nav_snapshot.fetch_page',side_effect=[(['invalid-row'],20797),RuntimeError('premature empty')]):

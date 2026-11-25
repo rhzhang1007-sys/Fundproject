@@ -17,7 +17,8 @@ class CurlPublicFetcher:
                  'https://fundf10.eastmoney.com/' if host=='api.fund.eastmoney.com' else
                  'https://guba.eastmoney.com/' if host in ('gbapi.eastmoney.com','guba.eastmoney.com') else
                  'https://stock.eastmoney.com/' if host.endswith('eastmoney.com') else
-                 'https://www.csindex.com.cn/' if host.endswith('csindex.com.cn') else 'https://www.cninfo.com.cn/')
+                 'https://www.csindex.com.cn/' if host.endswith('csindex.com.cn') else
+                 'https://finance.sina.com.cn/' if 'sina' in host else 'https://www.cninfo.com.cn/')
         last=None
         for attempt in range(3):
             if self.deadline and time.monotonic()+self.timeout>self.deadline:raise TimeoutError('Daily collection deadline reached')

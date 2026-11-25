@@ -4,6 +4,7 @@ import {readFile,writeFile,rename,mkdir,stat,realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PROMPTS,validateAIResult} from './dist/v08-ai.mjs';
+import {createForumService} from './forum-service.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 export const PROMPT_VERSION='web-ai-2026-11-24-v1';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
@@ -25,6 +26,7 @@ function validateInput(body){
 }
 export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch,date=today}={}){
  let queue=Promise.resolve();const clients=new Map();
+ const forum=createForumService(HERE);
  const available=()=>Boolean(config.key&&config.model&&/^https:\/\//.test(config.url)&&config.input>0&&config.output>0&&config.budget>0&&(!config.priceReviewAfter||date()<=config.priceReviewAfter));
  async function generate(body){
   let ledger;try{ledger=JSON.parse(await readFile(config.ledger,'utf8'));}catch(e){if(e.code!=='ENOENT')throw Error('用量记录无法读取');}
@@ -49,6 +51,13 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
    const url=new URL(req.url,'http://localhost');
    const host=req.headers.host||'';const allowedHost=config.origin?new URL(config.origin).host===host:/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(host);
    if(!allowedHost)return json(res,403,{error:'站点地址不匹配'});
+   if(url.pathname==='/api/forum'){
+    if(req.method==='GET'){try{return json(res,200,await forum.get(url.searchParams.get('objectId'),url.searchParams.get('date')));}catch(e){return json(res,400,{error:e.message});}}
+    if(req.method!=='POST')return json(res,405,{error:'请求方式不支持'});
+    if(req.headers.origin&&req.headers.origin!==(config.origin||`http://${req.headers.host}`))return json(res,403,{error:'来源不匹配'});
+    let body='',bytes=0;for await(const c of req){bytes+=c.length;if(bytes>500)return json(res,413,{error:'请求过长'});body+=c;}
+    try{const x=JSON.parse(body);if(Object.keys(x).some(k=>!['objectId','date'].includes(k)))throw Error('请求格式无效');return json(res,202,await forum.start(x.objectId,x.date));}catch(e){return json(res,400,{error:e.message});}
+   }
    if(url.pathname==='/api/ai/status'&&req.method==='GET')return json(res,200,{sharedAvailable:available(),model:available()?config.model:null,promptVersion:PROMPT_VERSION});
    if(url.pathname==='/api/ai'&&req.method==='POST'){
     // Same-origin only; never relay a client-supplied key, endpoint, model or system prompt.

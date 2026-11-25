@@ -36,9 +36,21 @@ export async function loadPublicData(path,fallback,{fetcher=fetch,timeout=8000}=
 }
 export function mergeActivity(local,remote){
  const union=(a=[],b=[],key=x=>x.id)=>[...new Map([...a,...b].map(x=>[key(x),x])).values()];
- const objects={...local.objects};for(const [id,row] of Object.entries(remote.objects||{})){const old=objects[id]||{},a=old.forum||{},b=row.forum||{};objects[id]={...old,...row,news:union(old.news,row.news),forum:{...a,...b,records:mergePosts(a.records,b.records),metrics:union(a.metrics,b.metrics,x=>x.date),claims:union(a.claims,b.claims,x=>x.date)}};}return {schemaVersion:1,objects};
+ const objects={...local.objects};for(const [id,row] of Object.entries(remote.objects||{})){const old=objects[id]||{},a=old.forum||{},b=row.forum||{};objects[id]={...old,...row,news:union(old.news,row.news),forum:{...a,...b,records:mergePosts(a.records,b.records),metrics:union(a.metrics,b.metrics,x=>x.date),claims:union(a.claims,b.claims,x=>x.date)}};}return {schemaVersion:1,objects,lastCheckedAt:[local.lastCheckedAt,remote.lastCheckedAt].filter(Boolean).sort().at(-1)};
 }
 
-export function mergePosts(a=[],b=[]){const map=new Map(a.map(x=>[x.id,x]));for(const row of b){const old=map.get(row.id);map.set(row.id,old?.content&&!row.content?{...row,...old}:row);}return [...map.values()].sort((x,y)=>y.date.localeCompare(x.date)||(y.publishedAt||'').localeCompare(x.publishedAt||'')).slice(0,30);}
+export function mergePosts(a=[],b=[]){
+ const key=r=>(r.objectId||'')+'|'+r.id,map=new Map(a.map(x=>[key(x),x]));
+ for(const row of b){const old=map.get(key(row));if(!old){map.set(key(row),row);continue;}
+  const combined={...old,...row};if(old.content&&(!row.content||old.content.length>row.content.length))combined.content=old.content;
+  if(Array.isArray(old.comments)||Array.isArray(row.comments))combined.comments=[...new Map([...(old.comments||[]),...(row.comments||[])].map(c=>[c.id,c])).values()];
+  combined.coverage={...old.coverage,...row.coverage};
+  if(combined.content&&old.coverage?.body==='complete'&&!row.content)combined.coverage.body='complete';
+  if(!Array.isArray(row.comments)&&old.coverage?.comments)combined.coverage.comments=old.coverage.comments;
+  if(old.boardVerified&&!Object.hasOwn(row,'boardVerified'))combined.boardVerified=true;
+  map.set(key(row),combined);
+ }
+ const sorted=[...map.values()].sort((x,y)=>y.date.localeCompare(x.date)||(y.publishedAt||'').localeCompare(x.publishedAt||'')),counts=new Map();return sorted.filter(r=>{const k=(r.objectId||'')+'|'+r.date,n=(counts.get(k)||0)+1;counts.set(k,n);return n<=30;});
+}
 
 export function mergeObservations(local={funds:{}},remote={funds:{}}){const funds={...local?.funds};for(const [code,row] of Object.entries(remote.funds||{})){const old=funds[code]||{},newer=(row.lastSnapshotFetchedAt||'')>(old.lastSnapshotFetchedAt||''),latest=(row.snapshot?.date||'')>(old.snapshot?.date||'')||row.snapshot?.date===old.snapshot?.date&&newer;funds[code]={...old,...row,snapshot:latest?row.snapshot:old.snapshot||row.snapshot,history:(row.history?.points?.length||0)>(old.history?.points?.length||0)?row.history:old.history||row.history};}return {schemaVersion:1,funds};}

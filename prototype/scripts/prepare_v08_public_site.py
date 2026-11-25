@@ -40,6 +40,7 @@ def prepare(root, destination):
         for folder in ['foundation','activity','relationships']:
             if (global_data/folder).exists():shutil.copytree(global_data/folder,destination/'data/v10'/folder,dirs_exist_ok=True)
     if (source/'data/v12').exists():shutil.copytree(source/'data/v12',destination/'data/v12',dirs_exist_ok=True)
+    if (source/'data/v13').exists():shutil.copytree(source/'data/v13',destination/'data/v13',dirs_exist_ok=True)
     catalog=json.loads((source/'data/catalog.json').read_text());catalog.pop('defaultWeights',None);catalog['sources']=[s for s in catalog.get('sources',[]) if s.get('visibility')!='internal']
     overnight=source/'data/v11'
     if overnight.exists():shutil.copytree(overnight,destination/'data/v11',dirs_exist_ok=True)

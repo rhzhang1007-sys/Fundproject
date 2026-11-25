@@ -13,8 +13,8 @@ on:
       - 'prototype/config/**'
       - 'prototype/requirements-daily.txt'
   schedule:
-    # 08:30 Asia/Shanghai; GitHub scheduling can be delayed.
-    - cron: '30 0 * * *'
+    # 08:50 Asia/Shanghai; GitHub scheduling can be delayed.
+    - cron: '50 0 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -49,8 +49,10 @@ jobs:
           python -m unittest discover -s prototype/tests -p 'test_global_*.py'
           python -m unittest discover -s prototype/tests -p 'test_overnight_import.py'
           python -m unittest discover -s prototype/tests -p 'test_daily_factors.py'
+          python -m unittest discover -s prototype/tests -p 'test_index_observations.py'
+          python -m unittest discover -s prototype/tests -p 'test_forum_sources.py'
       - name: Validate website data interfaces
-        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs
+        run: node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs prototype/tests/v10-objects.test.mjs prototype/tests/v11-integration.test.mjs prototype/tests/web-ai-server.test.mjs prototype/tests/v13-analysis.test.mjs
       - name: Check runtime configuration without collecting
         run: python prototype/scripts/daily_pipeline.py
       - name: Read collection switch

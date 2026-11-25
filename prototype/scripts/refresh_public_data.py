@@ -3,6 +3,7 @@
 Only the explicit --collect switch AND enabled configuration permit network access.
 Dated forum lists and HTML details preserve explicit coverage. Unknown is never zero.
 """
+from functools import lru_cache
 import argparse
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
@@ -36,9 +37,20 @@ def canonical_url(url):
     return p._replace(fragment='',query=urlencode(query)).geturl()
 
 
+@lru_cache(maxsize=1)
+def _public_source_review():
+    return load(Path(__file__).resolve().parents[1]/'config/public-source-review.json',{'excluded':[]})
+
+
+def public_event_allowed(event):
+    review=_public_source_review()
+    return not any(event.get('sourceRecordId')==x['sourceRecordId'] or event.get('url')==x['url'] for x in review['excluded'])
+
+
 def merge_events(previous, incoming, as_of, days=30):
     combined = {}; url_keys={}; record_keys={}
     for e in [*previous, *incoming]:
+        if not public_event_allowed(e):continue
         if not all(isinstance(e.get(k), str) and e[k] for k in ('id', 'entityCode', 'title', 'date', 'url')):
             raise ValueError('Event schema is incomplete')
         date = datetime.strptime(e['date'], '%Y-%m-%d').date()
@@ -123,7 +135,22 @@ def _forum_payload(fetch, code, page, size=50):
         raise ValueError('Forum list schema changed; retain previous snapshot')
     if data.get('rc') not in (None, 1):
         raise ValueError('Forum business error')
-    return data['re']
+    info=data.get('bar_info') or {};expected=code[2:] if code.startswith('of') else code
+    if data.get('bar_code') is not None:
+        role=105 if code.startswith('of') else 100
+        if str(info.get('QCode'))!=expected or info.get('Category')!=role:
+            raise ValueError('Forum board identity mismatch; unrelated fallback rejected')
+    # A live board response must identify every returned post; absent identities
+    # are excluded rather than guessed from the requested URL.
+    return [x for x in data['re'] if x.get('stockbar_code')] if data.get('bar_code') is not None else data['re']
+
+
+def forum_native(x,code):
+    """Exclude promotions and cross-board recommendations from object samples."""
+    board=str(x.get('stockbar_code') or '').lower()
+    if not board:return True  # Legacy offline fixtures; live API always supplies this field.
+    number=code[2:] if code.startswith('of') else code
+    return board in ({'of'+number,'sh'+number,'sz'+number} if code.startswith('of') else {number,'sh'+number,'sz'+number,'bj'+number})
 
 
 def _forum_row(x, code, observed):
@@ -135,7 +162,8 @@ def _forum_row(x, code, observed):
     datetime.strptime(published, '%Y-%m-%d')
     count = lambda k: x.get(k) if type(x.get(k)) is int and x[k] >= 0 else None
     return dict(id=pid, objectId=('fund'+code[2:] if code.startswith('of') else 'stock'+code),
-                title=title, url=f'https://guba.eastmoney.com/news,{code},{pid}.html',
+                nativeBoard=x.get('stockbar_code'),boardVerified=bool(x.get('stockbar_code')) and forum_native(x,code),
+                title=title, url=f'https://guba.eastmoney.com/news,{x.get("stockbar_code") if x.get("stockbar_code") and forum_native(x,code) else code},{pid}.html',
                 date=published, publishedAt=x.get('post_publish_time'), displayedAt=x.get('post_display_time'), observedAt=observed,
                 lastSeenAt=observed, readCount=count('post_click_count'),
                 commentCount=count('post_comment_count'), source='东方财富股吧', claim='')
@@ -143,7 +171,7 @@ def _forum_row(x, code, observed):
 
 def forum_posts(fetch, code, day, pages=2):
     return [_forum_row(x, code, day) for page in range(1, pages+1)
-            for x in _forum_payload(fetch, code, page)]
+            for x in _forum_payload(fetch, code, page) if forum_native(x,code)]
 
 
 class ForumDayRows(list):
@@ -169,7 +197,7 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
         page_signatures.add(signature)
         activities=[]
         for x in posts:
-            if x.get('post_top_status') not in (None,0): continue
+            if not forum_native(x,code) or x.get('post_top_status') not in (None,0): continue
             published=x.get('post_publish_time')
             try:
                 stamp=datetime.strptime(str(published)[:10],'%Y-%m-%d').date()
@@ -179,6 +207,7 @@ def forum_day(fetch, code, target, max_posts=0, max_pages=200, observed=None):
             if last_activity is not None and stamp>last_activity: activity_ordered=False
             last_activity=stamp;activities.append(stamp)
         for x in posts:
+            if not forum_native(x,code):continue
             r = _forum_row(x, code, observed or target)
             if r['date'] != target or r['id'] in seen:
                 continue

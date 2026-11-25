@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from build_global_foundation import load,write,shard
 
 ROOT=Path(__file__).resolve().parents[2]
-VERSION='factor-v2-2026-11-25'
+VERSION='factor-v3-2026-11-25'
 
 def number(x):return type(x) in (int,float) and math.isfinite(x)
 def weights_ok(weights):
@@ -32,6 +32,7 @@ def structure(funds,weights):
             if not code or code in seen or not number(v) or not 0<=v<=100:return dict(ready=False,reason='invalid-or-duplicate-position',asOf=as_of)
             seen.add(code);positions[code]=positions.get(code,0)+w*v/100
     coverage=sum(positions.values())
+    if coverage>1.005:return dict(ready=False,reason='disclosure-coverage-above-net-assets',asOf=as_of,coverage=coverage)
     if coverage<.5:return dict(ready=False,reason='disclosure-coverage-below-50-percent',asOf=as_of,coverage=coverage)
     hhi=sum((v/coverage)**2 for v in positions.values());effective=1/hhi
     return dict(ready=True,asOf=as_of,coverage=coverage,complete=all(p.get('complete') is True for p in selected),nominal=len(positions),effective=effective,hhi=hhi,multiple=len(positions)/effective,top5=sum(sorted(positions.values(),reverse=True)[:5])/coverage,maximumExposure=max(positions.values()),basis='observed-holdings-normalized-within-disclosed-part')
@@ -112,6 +113,24 @@ def aligned_returns(series,calendar,as_of):
         if a in observed and b in observed:rows.append(dict(**{'from':a},date=b,values=[observed[b]/observed[a]-1]))
     return rows,None
 
+def observed_returns(history,calendar,as_of):
+    """A separate source-published daily-change basis; never verified total return."""
+    points=history.get('points',[]);dates=[p[0] for p in points]
+    if dates!=sorted(set(dates)):return [],'invalid-observation-dates'
+    if calendar!=sorted(set(calendar)):return [],'invalid-calendar'
+    observed={p[0]:p[3] for p in points if len(p)>=4 and p[0]<=as_of}
+    if len(observed)<201:return [],'fewer-than-200-daily-observations'
+    end=max(observed);d=date.fromisoformat(end)
+    try:cut=d.replace(year=d.year-3).isoformat()
+    except ValueError:cut=d.replace(year=d.year-3,day=28).isoformat()
+    start=max(min(observed),cut);rows=[]
+    for a,b in zip(calendar,calendar[1:]):
+        if a<start or b>end:continue
+        v=observed.get(b)
+        if a not in observed or not number(v) or v<=-100:return [],'missing-source-daily-change'
+        rows.append(dict(**{'from':a},date=b,values=[v/100]))
+    return rows,None
+
 def build(root=ROOT,as_of=None):
     started=time.monotonic();root=Path(root);dist=root/'prototype/dist/data';as_of=as_of or (datetime.now(ZoneInfo('Asia/Shanghai')).date()-timedelta(days=1)).isoformat()
     date.fromisoformat(as_of);registry=[o for o in load(dist/'v10/objects.json')['objects'] if o['kind']=='fund']
@@ -136,6 +155,10 @@ def build(root=ROOT,as_of=None):
         if '货币' in obj.get('type',''):rows,reason=[],'money-market-yield-not-nav'
         else:rows,reason=aligned_returns(series.get(obj['id'],{}),calendar,as_of)
         row['risk']=dict(ready=False,reason=reason) if reason else portfolio_risk([r['values'] for r in rows],[1.])
+        observed,ob_reason=observed_returns(observation.get('history',{}),calendar,as_of) if '货币' not in obj.get('type','') and not (re.search('美元|欧元|港币|英镑|澳元|日元',obj['name']) and not profile.get('currency')) and profile.get('currency') in (None,'CNY') else ([], 'money-market-or-other-currency')
+        row['observedRisk']={**(portfolio_risk([r['values'] for r in observed],[1.]) if not ob_reason else dict(ready=False,reason=ob_reason)), 'basis':'source-published-daily-change','verifiedTotalReturn':False,'from':observed[0]['from'] if observed else None,'to':observed[-1]['date'] if observed else None}
+        row['observedPressure']=historical_path(observed,[1.]) if len(observed)>=200 else dict(ready=False,reason=ob_reason or 'fewer-than-200-daily-observations')
+        counts['observationRiskReady']+=row['observedRisk']['ready']
         p=historical_path(rows,[1.]) if rows else dict(ready=False,reason=reason or 'no-history')
         if p.get('ready') and (date.fromisoformat(p['to'])-date.fromisoformat(p['fromDate'])).days<365:p=dict(ready=False,reason='less-than-one-year-history')
         if p.get('ready'):
@@ -144,7 +167,7 @@ def build(root=ROOT,as_of=None):
             if not old_enough:p=dict(ready=False,reason='inception-missing-or-less-than-one-year')
         fees=[]
         for part in ['management','custody','service']:
-            v=profile.get('fees',{}).get(part);v=v.get('annualDecimal') if isinstance(v,dict) and number(v.get('annualDecimal')) else v.get('rawPercentValue')/100 if isinstance(v,dict) and number(v.get('rawPercentValue')) else float(v.strip()[:-1])/100 if isinstance(v,str) and re.fullmatch(r'\s*\d+(?:\.\d+)?\s*%\s*',v) else None;fees.append(v)
+            fee_fields=profile.get('fees',{});v=fee_fields.get(part) or (fee_fields.get('salesService') if part=='service' else None);v=v.get('annualDecimal') if isinstance(v,dict) and number(v.get('annualDecimal')) else v.get('rawPercentValue')/100 if isinstance(v,dict) and number(v.get('rawPercentValue')) else float(v.strip()[:-1])/100 if isinstance(v,str) and re.fullmatch(r'\s*\d+(?:\.\d+)?\s*%\s*',v) else None;fees.append(v)
         row['cost']=dict(annualFee=sum(fees) if all(number(v) and v>=0 for v in fees) else None,basis='source-fee-fields',feeReturnRatio=None)
         if p.get('ready') and p['totalReturn']>0 and row['cost']['annualFee'] is not None:row['cost']['feeReturnRatio']=row['cost']['annualFee']*(date.fromisoformat(p['to'])-date.fromisoformat(p['fromDate'])).days/365/p['totalReturn']
         def paired(index):

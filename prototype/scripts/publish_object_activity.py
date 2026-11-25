@@ -3,6 +3,7 @@ from datetime import datetime,timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import json
+from refresh_public_data import public_event_allowed
 from build_global_foundation import load,write,shard
 
 def publish(root,as_of=None):
@@ -71,7 +72,7 @@ def publish(root,as_of=None):
             forum['records']=[r for rows in by_day.values() for r in sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:30]]
             records=[]
             for row in sorted((r for r in forum.get('records',[]) if r['date']<=target),key=lambda r:(r['date'],r.get('publishedAt') or '',r['id']),reverse=True)[:30]:
-                item={k:row.get(k) for k in ['id','objectId','title','url','date','publishedAt','source','readCount','commentCount','content','coverage']}
+                item={k:row.get(k) for k in ['id','objectId','title','url','date','publishedAt','source','readCount','commentCount','content','coverage','boardVerified','nativeBoard']}
                 item['comments']=[{k:c.get(k) for k in ['id','text','at','replyTo']} for c in row.get('comments',[])]
                 records.append(item)
             kind='fund' if oid.startswith('fund') else 'stock';code=oid[len(kind):]
@@ -81,7 +82,7 @@ def publish(root,as_of=None):
                 write(dist/post_path,dict(schemaVersion=1,objectId=oid,records=records))
             metadata=[{k:v for k,v in r.items() if k not in ('content','comments')} for r in records]
             metrics=sorted(forum.get('metrics',[]),key=lambda x:x['date'])[-1:]
-            public['objects'][oid]=dict(news=entry.get('news',[]),forum=dict(records=metadata,materialPath=post_path,claims=[],metrics=metrics,listCoverage=forum.get('listCoverage'),storedPostCount=len(forum.get('records',[]))))
+            public['objects'][oid]=dict(news=[e for e in entry.get('news',[]) if public_event_allowed(e)],forum=dict(records=metadata,materialPath=post_path,claims=[],metrics=metrics,listCoverage=forum.get('listCoverage'),storedPostCount=len(forum.get('records',[]))))
         write(root/'prototype/.public-corpus/activity'/key,value)
         write(dist/'v10/activity'/key,public)
     # Retired rolling-window files carry no forever-public copies of old comments.
