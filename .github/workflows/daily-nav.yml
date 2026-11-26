@@ -46,13 +46,29 @@ jobs:
           python prototype/scripts/compute_daily_factors.py
           node prototype/build-analysis-view.mjs
           node prototype/daily-runtime.mjs mark nav
+      - name: Keep research catalogue on the same analytical version
+        id: research
+        run: |
+          node --input-type=module - <<'JS'
+          import {readFile,appendFile} from 'node:fs/promises';
+          import {buildResearch} from './prototype/build-research-view.mjs';
+          import {RESEARCH_METHOD} from './prototype/dist/v16-compute.mjs';
+          const base='prototype/dist/data/';
+          const input=JSON.parse(await readFile(base+'v14/manifest.json'));
+          let current;try{current=JSON.parse(await readFile(base+'v16/manifest.json'));}catch{}
+          const rebuild=current?.sourceVersion!==input.version||current?.method!==RESEARCH_METHOD;
+          if(rebuild)console.log(JSON.stringify(await buildResearch()));
+          await appendFile(process.env.GITHUB_OUTPUT,'rebuilt='+rebuild+'\n');
+          JS
+      - name: Validate matching research data before committing
+        run: node --test prototype/tests/v16-research.test.mjs
       - name: Commit validated daily observations and factors
-        if: success() && steps.daily.outputs.run == 'true'
+        if: success() && (steps.daily.outputs.run == 'true' || steps.research.outputs.rebuilt == 'true')
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add prototype/dist/data/v12/nav prototype/dist/data/v12/factors prototype/dist/data/v12/factor-status.json prototype/dist/data/v12/nav-sync-status.json prototype/dist/data/v12/market-sync-status.json prototype/dist/data/v11/observations prototype/dist/data/v11/market.json
-          git add prototype/dist/data/v14
+          git add prototype/dist/data/v14 prototype/dist/data/v16
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update daily NAV observations and eligible factors'
           git -c rebase.autoStash=true pull --rebase
