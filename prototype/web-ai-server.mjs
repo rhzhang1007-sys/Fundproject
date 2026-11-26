@@ -3,10 +3,12 @@ import http from 'node:http';
 import {readFile,writeFile,rename,mkdir,stat,realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {PROMPTS,validateAIResult} from './dist/v08-ai.mjs';
+import {PROMPTS,resolveAIResult} from './dist/v08-ai.mjs';
 import {createForumService} from './forum-service.mjs';
+import {createNewsService} from './news-service.mjs';
+import {modelEndpoint,createModelTransport} from './model-transport.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
-export const PROMPT_VERSION='web-ai-v7-2026-11-25';
+export const PROMPT_VERSION='usable-results-v20-2026-11-26';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
 export async function readServerConfig(env=process.env){
@@ -15,7 +17,8 @@ export async function readServerConfig(env=process.env){
  let input=Number(get('WEB_LLM_PRICE_IN')),output=Number(get('WEB_LLM_PRICE_OUT')),priceReviewAfter=null;
  if(!get('WEB_LLM_PRICE_IN').trim()&&!get('WEB_LLM_PRICE_OUT').trim())try{const catalog=JSON.parse(await readFile(path.join(HERE,'config/llm-pricing.json'),'utf8'));const entry=catalog.entries.find(x=>x.host===new URL(url).hostname&&x.model===model.toLowerCase());if(entry&&today()<=catalog.reviewAfter){input=entry.input;output=entry.output;priceReviewAfter=catalog.reviewAfter;}}catch{}
  let origin=get('WEB_LLM_ORIGIN').trim();if(origin){let parsed;try{parsed=new URL(origin);}catch{throw Error('WEB_LLM_ORIGIN须填网页的协议和域名；本机使用请留空');}if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)throw Error('WEB_LLM_ORIGIN不能包含路径、查询参数或认证信息');origin=parsed.origin;}
- return {url,model,key,input,output,priceReviewAfter,origin,budget:Number(get('WEB_LLM_DAILY_BUDGET')||5),ledger:path.join(HERE,'.private/web-ai-usage.json')};
+ const backups=get('WEB_LLM_FALLBACK_URL').trim()?[modelEndpoint(get('WEB_LLM_FALLBACK_URL').trim())]:[];
+ return {url,backups,model,key,input,output,priceReviewAfter,origin,budget:Number(get('WEB_LLM_DAILY_BUDGET')||5),ledger:path.join(HERE,'.private/web-ai-usage.json')};
 }
 function validateInput(body){
  if(!body||!Object.hasOwn(PROMPTS,body.task)||Object.keys(body).some(k=>!['task','materials','question'].includes(k)))throw Error('请求格式无效');
@@ -24,27 +27,30 @@ function validateInput(body){
  for(const m of body.materials){if(!m||typeof m.id!=='string'||!m.id||ids.has(m.id)||typeof m.text!=='string'||m.text.length>30000||Object.keys(m).some(k=>!['id','text','url','date','locator'].includes(k)))throw Error('材料格式无效');ids.add(m.id);total+=Buffer.byteLength(m.text);}
  if(total>120000||(!body.materials.length&&body.task!=='verify'))throw Error('请选择适量资料');return body;
 }
-export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch,date=today}={}){
+export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch,date=today,forumService}={}){
  let queue=Promise.resolve();const clients=new Map();
- const forum=createForumService(HERE);
+ const forum=forumService||createForumService(HERE);
+ const news=createNewsService({root:HERE});
+ const transport=/^https:\/\//.test(config.url)?createModelTransport({url:config.url,backups:config.backups||[],fetcher:upstream}):upstream;
  const available=()=>Boolean(config.key&&config.model&&/^https:\/\//.test(config.url)&&config.input>0&&config.output>0&&config.budget>0&&(!config.priceReviewAfter||date()<=config.priceReviewAfter));
- async function generate(body,repair=null,deadline=Date.now()+90000){
+ async function generate(body,deadline=Date.now()+90000){
   let ledger;try{ledger=JSON.parse(await readFile(config.ledger,'utf8'));}catch(e){if(e.code!=='ENOENT')throw Error('用量记录无法读取');}
   if(!ledger||ledger.date!==date())ledger={date:date(),calls:0,costCNY:0,reservedCNY:0};
   const persist=async()=>{await mkdir(path.dirname(config.ledger),{recursive:true});const tmp=config.ledger+'.tmp';await writeFile(tmp,JSON.stringify(ledger));await rename(tmp,config.ledger);};
   const messages=[{role:'system',content:PROMPTS[body.task]},{role:'user',content:JSON.stringify({materials:body.materials,question:body.question||''})}];
-  if(repair)messages.push({role:'assistant',content:repair.draft.slice(0,20000)},{role:'user',content:'上次结果未通过程序校验：'+repair.reason+'。请只用原材料里已经显示的数字和来源ID，不自行换算、四舍五入或补数据。删去无依据的内容，重新只输出规定JSON。'});
   const cap=/^glm-5\.3/i.test(config.model)?8192:1600;const reserve=(Buffer.byteLength(JSON.stringify(messages))*config.input+cap*config.output)/1e6;
   if(ledger.costCNY+ledger.reservedCNY+reserve>config.budget)throw Error('今日默认AI额度已用完，可使用自己的接口');
+  if(Date.now()>=deadline)throw Error('模型请求超时');
   ledger.calls++;ledger.reservedCNY+=reserve;await persist();
-  if(Date.now()>=deadline)throw Error('模型请求超时');const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),deadline-Date.now());
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),deadline-Date.now());
   try{
-   let response;try{response=await upstream(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,...(/^glm-5\.3/i.test(config.model)?{thinking:{type:'enabled'},reasoning_effort:'low'}:{}),temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});}catch(e){if(e.name==='AbortError')throw e;const code=String(e.cause?.code||e.code||'NETWORK_ERROR');console.error(JSON.stringify({stage:'model-transport',code:/^[A-Z0-9_]{1,60}$/.test(code)?code:'NETWORK_ERROR'}));throw Error('模型连接失败，请稍后重试');}
+   let response;try{response=await transport(config.url,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify({model:config.model,messages,...(/^glm-5\.3/i.test(config.model)?{thinking:{type:'enabled'},reasoning_effort:'low'}:{}),temperature:/^glm-5\.3/i.test(config.model)?1:.1,max_tokens:cap})});}catch(e){if(e.requestNotSent){ledger.reservedCNY=Math.max(0,ledger.reservedCNY-reserve);await persist();}if(e.name==='AbortError')throw e;const code=String(e.cause?.code||e.code||'NETWORK_ERROR');console.error(JSON.stringify({stage:'model-transport',code:/^[A-Z0-9_]{1,60}$/.test(code)?code:'NETWORK_ERROR'}));throw Error('模型连接失败，请稍后重试');}
    if(!response.ok)throw Error('模型服务暂时不可用');
    const raw=await response.text();if(Buffer.byteLength(raw)>1000000)throw Error('模型响应过长');const value=JSON.parse(raw);
    if(value.usage&&Number.isSafeInteger(value.usage.prompt_tokens)&&value.usage.prompt_tokens>=0&&Number.isSafeInteger(value.usage.completion_tokens)&&value.usage.completion_tokens>=0){ledger.reservedCNY=Math.max(0,ledger.reservedCNY-reserve);ledger.costCNY+=(value.usage.prompt_tokens*config.input+value.usage.completion_tokens*config.output)/1e6;await persist();}
-   if(value.choices?.[0]?.finish_reason==='length')throw Error('模型输出未完成，请减少所选材料');
-   const draft=value.choices?.[0]?.message?.content||value.output_text||'';let result;try{result=validateAIResult(draft,body.task,body.materials,body.question||'');}catch(e){console.error(JSON.stringify({stage:'model-validation',reason:e.message}));if(!repair&&Date.now()+10000<deadline)return generate(body,{draft,reason:e.message},deadline);throw e;}return {result,promptVersion:PROMPT_VERSION};
+   const draft=value.choices?.[0]?.message?.content||value.output_text||'';
+   const result=resolveAIResult(draft,body.task,body.materials,body.question||'');
+   return {result,promptVersion:PROMPT_VERSION};
   }finally{clearTimeout(timer);}
  }
  return async(req,res)=>{
@@ -52,12 +58,23 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
    const url=new URL(req.url,'http://localhost');
    const host=req.headers.host||'';const allowedHost=config.origin?new URL(config.origin).host===host:/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(host);
    if(!allowedHost)return json(res,403,{error:'站点地址不匹配'});
+   if(url.pathname==='/api/news/body'&&req.method==='GET'){
+    if([...url.searchParams.keys()].some(k=>k!=='eventId'))return json(res,400,{error:'只接受已收录事件标识'});
+    try{return json(res,200,await news.get(url.searchParams.get('eventId')));}catch(e){return json(res,422,{error:e.message});}
+   }
+   if(url.pathname==='/api/forum/batch'){
+    if(req.method==='GET'){try{return json(res,200,await forum.getBatch(url.searchParams.get('jobId')));}catch(e){return json(res,400,{error:e.message});}}
+    if(req.method!=='POST')return json(res,405,{error:'请求方式不支持'});
+    if(req.headers.origin&&req.headers.origin!==(config.origin||`http://${req.headers.host}`))return json(res,403,{error:'来源不匹配'});
+    let raw='',size=0;for await(const c of req){size+=c.length;if(size>15000)return json(res,413,{error:'对象数量过多'});raw+=c;}
+    try{const x=JSON.parse(raw);if(Object.keys(x).some(k=>!['objectIds','date'].includes(k)))throw Error('请求格式无效');return json(res,202,await forum.startBatch(x.objectIds,x.date));}catch(e){return json(res,400,{error:e.message});}
+   }
    if(url.pathname==='/api/forum'){
     if(req.method==='GET'){try{return json(res,200,await forum.get(url.searchParams.get('objectId'),url.searchParams.get('date')));}catch(e){return json(res,400,{error:e.message});}}
     if(req.method!=='POST')return json(res,405,{error:'请求方式不支持'});
     if(req.headers.origin&&req.headers.origin!==(config.origin||`http://${req.headers.host}`))return json(res,403,{error:'来源不匹配'});
-    let body='',bytes=0;for await(const c of req){bytes+=c.length;if(bytes>500)return json(res,413,{error:'请求过长'});body+=c;}
-    try{const x=JSON.parse(body);if(Object.keys(x).some(k=>!['objectId','date'].includes(k)))throw Error('请求格式无效');return json(res,202,await forum.start(x.objectId,x.date));}catch(e){return json(res,400,{error:e.message});}
+    let body='',bytes=0;for await(const c of req){bytes+=c.length;if(bytes>2000)return json(res,413,{error:'请求过长'});body+=c;}
+    try{const x=JSON.parse(body);if(Object.keys(x).some(k=>!['objectId','date','postIds','allMissing'].includes(k)))throw Error('请求格式无效');return json(res,202,await forum.start(x.objectId,x.date,x.postIds||[],{allMissing:x.allMissing===true}));}catch(e){return json(res,400,{error:e.message});}
    }
    if(url.pathname==='/api/ai/status'&&req.method==='GET')return json(res,200,{sharedAvailable:available(),model:available()?config.model:null,promptVersion:PROMPT_VERSION});
    if(url.pathname==='/api/ai'&&req.method==='POST'){
@@ -69,7 +86,7 @@ export function createHandler({root=path.join(HERE,'dist'),config,upstream=fetch
     const chunks=[];let size=0;for await(const c of req){size+=c.length;if(size>200000)return json(res,413,{error:'材料过长'});chunks.push(c);}
     let body;try{body=validateInput(JSON.parse(Buffer.concat(chunks).toString()));}catch(e){return json(res,400,{error:e.message});}
     const result=queue.then(()=>generate(body));queue=result.catch(()=>{});
-    try{return json(res,200,await result);}catch(e){const allowed=['模型连接失败，请稍后重试','用量记录无法读取','今日默认AI额度已用完，可使用自己的接口','模型服务暂时不可用','模型响应过长','模型输出未完成，请减少所选材料'];const message=allowed.includes(e.message)?e.message:e.name==='AbortError'?'请求超时':'模型结果未通过来源校验，请重试';return json(res,502,{error:message});}
+    try{return json(res,200,await result);}catch(e){const allowed=['模型连接失败，请稍后重试','用量记录无法读取','今日默认AI额度已用完，可使用自己的接口','模型服务暂时不可用','模型响应过长'];return json(res,502,{error:allowed.includes(e.message)?e.message:e.name==='AbortError'?'请求超时，请稍后重试':'模型服务未返回可用内容，请稍后重试'});}
    }
    if(url.pathname.startsWith('/api/'))return json(res,404,{error:'接口不存在'});
    if(!['GET','HEAD'].includes(req.method))return json(res,405,{error:'请求方式不支持'});

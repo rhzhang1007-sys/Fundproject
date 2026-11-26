@@ -1,5 +1,10 @@
 name: Daily NAV and deterministic factors
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/daily-nav.yml'
+      - 'prototype/scripts/collect_nav_snapshot.py'
   schedule:
     # 08:30 Asia/Shanghai. Bulk NAV only, no per-fund daily backfill.
     - cron: '30 0 * * *'
@@ -35,7 +40,7 @@ jobs:
       - name: Collect source NAV, update frontend, compute eligible factors
         if: steps.daily.outputs.run == 'true'
         run: |
-          python prototype/scripts/collect_nav_snapshot.py --size 1000 --max-pages 60 --sleep 1
+          python prototype/scripts/collect_nav_snapshot.py --size 50000 --max-pages 60 --sleep 1
           python prototype/scripts/sync_nav_observations.py
           python prototype/scripts/update_market_observations.py
           python prototype/scripts/compute_daily_factors.py

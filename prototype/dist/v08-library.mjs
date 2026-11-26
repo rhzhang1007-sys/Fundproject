@@ -1,4 +1,5 @@
 import {safeUrl} from './core.mjs';
+import {strongText} from './v15-ui.mjs';
 import {cleanEntry, splitTags, putImage, getImage, imageDataURL, importImage, deleteImage} from './library.mjs';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>!v?'':String(v).includes('T')?new Date(v).toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}):String(v).slice(0,10);
@@ -9,7 +10,7 @@ const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{retu
 export function createLibrary(api){
  let entries=[],spaces=[],tags=[],urls=[],pending=[],editing=null,favorite=null;
  const chosen=new Set();
- const f={folder:'全部',tag:'全部',query:''};
+ const f={folder:'全部',tag:'全部',query:'',kind:'all'};
  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{api.toast('保存失败，请导出备份');return false;}};
  function reloadLibrary(){
   const notes=read('zhijian-notebook-v1',[]),oldFavs=read('zhijian-v07-favs',[]);
@@ -25,15 +26,15 @@ export function createLibrary(api){
  }
   function notebookView() {
     reloadLibrary();
-    const rows=entries.filter(n=>(f.folder==='全部'||n.folder===f.folder)&&(f.tag==='全部'||splitTags(n.tags).includes(f.tag))&&[n.title,n.excerpt,n.note,n.tags].join(' ').includes(f.query)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
-    return `<div class="v7-toolbar"><label>搜索信息库<input data-r-filter="query" value="${h(f.query)}" placeholder="标题、摘录、笔记或标签"></label>${action('add-note','添加内容')}${action('export-notes','导出文字与图片')}${action('import-notes','导入信息库')}<input id="r-notebook-file" type="file" accept="application/json,.json" hidden></div>
+    const rows=entries.filter(n=>(f.kind!=='ai'||n.aiResult)&&(f.folder==='全部'||n.folder===f.folder)&&(f.tag==='全部'||splitTags(n.tags).includes(f.tag))&&[n.title,n.excerpt,n.note,n.tags].join(' ').includes(f.query)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+    return `<div class="v7-toolbar">${action('all-entries','全部内容','',f.kind==='all'?'v7-btn primary':'v7-btn')}${action('ai-entries','AI分析 · '+entries.filter(n=>n.aiResult).length,'',f.kind==='ai'?'v7-btn primary':'v7-btn')}<label>搜索信息库<input data-r-filter="query" value="${h(f.query)}" placeholder="标题、摘录、笔记或标签"></label>${action('add-note','添加内容')}${action('export-notes','导出文字与图片')}${action('import-notes','导入信息库')}<input id="r-notebook-file" type="file" accept="application/json,.json" hidden></div>
       <div class="v7-library"><aside><h3>分类</h3>${['全部',...spaces].map(s=>action('folder',s,s,f.folder===s?'v7-btn primary':'v7-btn')).join('')}${action('new-space','新建分类')}<h3>分类标签</h3>${['全部',...tags].map(t=>action('tag',t==='全部'?'全部标签':'# '+t,t,f.tag===t?'v7-btn primary':'v7-btn')).join('')}${action('new-tag','新建标签')}</aside><div>
       <p class="v7-cap">${rows.length} 条收藏</p>
-      ${rows.map(n=>`<article class="v7-card"><label><input type="checkbox" data-library-pick="${h(n.id)}" ${chosen.has(n.id)?'checked':''}>选择分析</label><p class="v7-cap">${h(n.folder)} · ${date(n.updatedAt)}</p><h2>${h(n.title)}</h2>${n.excerpt?`<p class="v7-comment">${h(n.excerpt)}</p>`:''}
+      ${rows.map(n=>`<article class="v7-card"><label><input type="checkbox" data-library-pick="${h(n.id)}" ${chosen.has(n.id)?'checked':''}>选择分析</label><p class="v7-cap">${h(n.folder)} · ${date(n.updatedAt)}</p><h2>${h(n.title)}</h2>${n.excerpt?`<p class="v7-comment">${n.aiResult?strongText(n.aiResult.result.overview?.text||n.excerpt):h(n.excerpt)}</p>`:''}
         ${n.images.length?`<div class="v7-images">${n.images.map(id=>`<button data-r="image" data-id="${h(id)}"><img data-r-image="${h(id)}" alt="收藏图片"></button>`).join('')}</div>`:''}
         ${n.analysisContext?`<details><summary>保存时的分析依据</summary><p>${h(n.analysisContext.objectName)} · ${h(n.analysisContext.recordLabel)}<br>报告日：${h(n.analysisContext.reportDates?.join(' / ')||'未保存')}<br>方法：${h(n.analysisContext.methodVersion||'未保存')}<br>资料版本：${h(n.analysisContext.dataVersion||'未保存')}</p></details>`:''}
         ${n.note?`<div class="v7-note"><strong>我的笔记</strong><p class="v7-comment">${h(n.note)}</p></div>`:''}<p class="v7-cap">${splitTags(n.tags).map(t=>'# '+h(t)).join(' ')}</p>
-        <div class="v7-actions">${link(n.url,'原始链接')}${action('edit-note','编辑',n.id)}${action('delete-note','移除',n.id)}</div></article>`).join('')||'<div class="v7-empty">暂无收藏</div>'}</div></div>`;
+        <div class="v7-actions">${link(n.url,'原始链接')}${n.aiResult?action('open-ai','查看分析',n.id):''}${action('edit-note','编辑',n.id)}${action('delete-note','移除',n.id)}</div></article>`).join('')||'<div class="v7-empty">暂无收藏</div>'}</div></div>`;
   }
   function editor(value={}) {
     editing=value;pending=[];
@@ -95,9 +96,11 @@ export function createLibrary(api){
 
  async function click(ev){
   const el=ev.target.closest('[data-r]');if(!el)return;ev.preventDefault();const id=el.dataset.id,act=el.dataset.r;
+  if(act==='ai-entries'||act==='all-entries'){f.kind=act==='ai-entries'?'ai':'all';f.folder='全部';f.tag='全部';f.query='';return api.render();}
   if(act==='folder'||act==='tag'){f[act]=id;return api.render();}
   if(act==='new-space'||act==='new-tag')return api.dialog(act==='new-space'?'新建分类':'新建标签',`<form id="r-name-form" data-kind="${act}"><label class="v7-field"><span>名称</span><input name="name" required maxlength="80"></label><button class="v7-btn primary">保存</button></form>`);
   if(act==='add-note')return editor();if(act==='edit-note')return editor(entries.find(n=>n.id===id));
+  if(act==='open-ai'){const n=entries.find(n=>n.id===id);if(n?.aiResult)api.showAI(n.aiResult);return;}
   if(act==='delete-note'){if(id.startsWith('legacy-'))save('zhijian-v08-removed-favs',[...read('zhijian-v08-removed-favs',[]),id]);if(save('zhijian-notebook-v1',entries.filter(n=>n.id!==id)))api.render();return;}
   if(act==='remove-image'){el.closest('[data-r-existing]').remove();return;}
   if(act==='remove-pending'){pending=pending.filter(p=>p.id!==id);el.closest('[data-r-pending]').remove();return;}
@@ -114,5 +117,15 @@ export function createLibrary(api){
  document.addEventListener('paste',e=>{if(!document.querySelector('#r-note-form'))return;const files=[...(e.clipboardData?.files||[])];if(files.some(x=>x.type.startsWith('image/'))){e.preventDefault();addFiles(files);}});
  document.addEventListener('dragover',e=>{if(document.querySelector('#r-note-form'))e.preventDefault();});document.addEventListener('drop',e=>{if(document.querySelector('#r-note-form')){e.preventDefault();addFiles([...e.dataTransfer.files]);}});
  function afterRender(){for(const u of urls)URL.revokeObjectURL(u);urls=[];if(api.isNotebook())hydrate();}
- reloadLibrary();return {notebookView,afterRender,collect,edit:editor,analysisMaterials:()=>{reloadLibrary();return entries.filter(n=>chosen.has(n.id)).slice(0,29).map(n=>({id:'private-'+n.id,text:[n.title,n.excerpt,n.note].filter(Boolean).join('\n\n'),url:safeUrl(n.url),date:date(n.updatedAt)}));},materials:()=>{reloadLibrary();return entries;}};
+ function saveAI(value,job){
+  reloadLibrary();const existing=entries.find(n=>n.referenceId==='ai:'+job.id),id=existing?.id||crypto.randomUUID();
+  Object.assign(value,{libraryEntryId:id,scope:job.scope,createdAt:job.createdAt});
+  const entry=cleanEntry({...existing,id,title:value.result.title,referenceId:'ai:'+job.id,folder:existing?.folder||'AI解读',excerpt:[value.result.overview?.text,...value.result.points.map(p=>(p.heading?p.heading+'：':'')+p.text)].filter(Boolean).join('\n\n'),aiResult:value,updatedAt:new Date().toISOString()});
+  const next=existing?entries.map(n=>n.id===entry.id?entry:n):[...entries,entry];if(!save('zhijian-notebook-v1',next))return false;entries=next;if(!spaces.includes('AI解读'))spaces.push('AI解读');save('zhijian-spaces-v2',spaces);return true;
+ }
+ function aiEntry(id){reloadLibrary();return entries.find(n=>n.id===id&&n.aiResult);}
+ function latestAI(scope){reloadLibrary();return entries.filter(n=>n.aiResult?.scope===scope).sort((a,b)=>(a.aiResult.createdAt||a.createdAt).localeCompare(b.aiResult.createdAt||b.createdAt)).at(-1);}
+ function saveAINote(id,note){reloadLibrary();const entry=aiEntry(id);if(!entry)return false;const next=entries.map(n=>n.id===id?cleanEntry({...n,note,updatedAt:new Date().toISOString()}):n);if(!save('zhijian-notebook-v1',next))return false;entries=next;return true;}
+ function showAIEntries(){f.kind='ai';f.folder='全部';f.tag='全部';f.query='';api.showNotebook();}
+ reloadLibrary();return {saveAI,aiEntry,latestAI,saveAINote,showAIEntries,notebookView,afterRender,collect,edit:editor,analysisMaterials:()=>{reloadLibrary();return entries.filter(n=>chosen.has(n.id)).slice(0,29).map(n=>({id:'private-'+n.id,text:[n.title,n.excerpt,n.note].filter(Boolean).join('\n\n'),url:safeUrl(n.url),date:date(n.updatedAt)}));},materials:()=>{reloadLibrary();return entries;}};
 }

@@ -7,7 +7,14 @@ export function cleanEntry(raw) {
   if(!raw || typeof raw.title!=='string') return null;
   const get=(key,max)=>typeof raw[key]==='string'?raw[key].slice(0,max):'';
   const analysisContext=cleanContext(raw.analysisContext);
-  return {analysisContext,id:get('id',100)||crypto.randomUUID(),referenceId:get('referenceId',100),title:get('title',180),url:safeUrl(get('url',2000)),excerpt:get('excerpt',20000),folder:get('folder',100)||'未分类',tags:splitTags(raw.tags).join('，'),note:get('note',20000),images:Array.isArray(raw.images)?raw.images.filter(s=>typeof s==='string').slice(0,12):[],createdAt:get('createdAt',50)||new Date().toISOString(),updatedAt:get('updatedAt',50)||new Date().toISOString()};
+  return {analysisContext,...(cleanAI(raw.aiResult)?{aiResult:cleanAI(raw.aiResult)}:{}),id:get('id',100)||crypto.randomUUID(),referenceId:get('referenceId',100),title:get('title',180),url:safeUrl(get('url',2000)),excerpt:get('excerpt',20000),folder:get('folder',100)||'未分类',tags:splitTags(raw.tags).join('，'),note:get('note',20000),images:Array.isArray(raw.images)?raw.images.filter(s=>typeof s==='string').slice(0,12):[],createdAt:get('createdAt',50)||new Date().toISOString(),updatedAt:get('updatedAt',50)||new Date().toISOString()};
+}
+function cleanAI(raw){
+ if(!raw||typeof raw!=='object'||!Array.isArray(raw.materials)||!Array.isArray(raw.result?.points))return null;
+ const materials=raw.materials.slice(0,30).filter(m=>typeof m.id==='string'&&typeof m.text==='string').map(m=>({id:m.id.slice(0,200),text:m.text.slice(0,1500),date:typeof m.date==='string'?m.date.slice(0,40):null,url:safeUrl(m.url),locator:typeof m.locator==='string'?m.locator.slice(0,250):''})),ids=new Set(materials.map(m=>m.id));
+ const block=p=>typeof p?.text==='string'?{heading:typeof p.heading==='string'?p.heading.slice(0,200):'',text:p.text.slice(0,3000),sourceIds:Array.isArray(p.sourceIds)?p.sourceIds.filter(id=>ids.has(id)).slice(0,30):[]}:null;
+ const result={title:String(raw.result.title||'AI解读').slice(0,200),points:raw.result.points.slice(0,30).map(block).filter(Boolean)};if(raw.result.overview)result.overview=block(raw.result.overview);if(raw.result.quality)result.quality={kind:raw.result.quality.kind==='source-excerpts'?'source-excerpts':'analysis',numberWarnings:Math.max(0,Math.min(100,Number(raw.result.quality.numberWarnings)||0)),unmappedBlocks:Math.max(0,Math.min(100,Number(raw.result.quality.unmappedBlocks)||0))};if(['supported','contradicted','unverifiable'].includes(raw.result.verdict))result.verdict=raw.result.verdict;
+ return {result,materials,task:typeof raw.task==='string'?raw.task.slice(0,60):'summary',scope:['news','sources','discussion','library','analysis'].includes(raw.scope)?raw.scope:null,createdAt:typeof raw.createdAt==='string'?raw.createdAt.slice(0,50):null,libraryEntryId:typeof raw.libraryEntryId==='string'?raw.libraryEntryId.slice(0,100):null};
 }
 export function inDateRange(value,start,end) {
   const date=typeof value==='string'?value.slice(0,10):'';

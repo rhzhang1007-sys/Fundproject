@@ -238,19 +238,23 @@ class _Body(HTMLParser):
         if self.depth and not self.ignore: self.parts.append(text)
 
 
-def detail_record(page, expected_comments=None, max_chars=50000):
+def detail_record(page, expected_comments=None, max_chars=50000, expected_post=None):
     parser=_Body(); parser.feed(page)
     content=re.sub(r'\s+', ' ', ''.join(parser.parts)).strip()
     body_basis='html-body'
     if not parser.found:
         # Current public React pages embed the original post as JSON, not zwconbody.
-        embedded=re.search(r'(?:var|let|const)\s+post_article\s*=\s*',page)
+        embedded=re.search(r'(?:(?:var|let|const)\s+|window\.)post_article\s*=\s*',page)
         if embedded:
             try:
                 article,_=json.JSONDecoder().raw_decode(page[embedded.end():])
+                if expected_post and isinstance(article,dict):
+                    if article.get('post_id') is not None and str(article['post_id'])!=str(expected_post['id']):raise IncompleteSource('Post identity mismatch')
+                    if article.get('post_publish_time') and str(article['post_publish_time'])[:10]!=expected_post['date']:raise IncompleteSource('Post date mismatch')
                 raw_content=article.get('post_content') if isinstance(article,dict) else None
                 if isinstance(raw_content,str) and raw_content:
                     content=_text(raw_content);parser.found=True;body_basis='embedded-post-article'
+            except IncompleteSource:raise
             except ValueError:pass
     comments=[]; payload=None
     match=re.search(r'(?:var|let|const)\s+reply_list\s*=\s*', page)

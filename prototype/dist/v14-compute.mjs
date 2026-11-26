@@ -1,6 +1,6 @@
 // v7 display calculations. Fractions internally; source fields retain their units.
 import {portfolioRisk,historicalPath,isoDate} from './quant.mjs';
-export const V7_METHOD='analysis-v7-reviewed-2026-11-25';
+export const V7_METHOD='analysis-v7-reviewed-2026-11-26';
 export const FACTOR_WEIGHTS={cost:.25,downside:.25,experience:.20,stability:.15,size:.10,holdingsChange:.05};
 export const FACTOR_NAMES={cost:'成本',downside:'下行',experience:'正收益日',stability:'排名稳定',size:'规模位置（试验）',holdingsChange:'持仓权重变化'};
 const finite=Number.isFinite,mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
@@ -28,7 +28,7 @@ export function structureV7(funds){
 }
 export function checkedNav(nav,card,calendar,asOf){
  const fail=reason=>({ready:false,reason,quality:nav?.quality||'missing',points:[]});
- if(!nav)return fail('复权净值历史未接入');if(nav.crossCheck!=='agree')return fail(nav.crossCheck==='divergent'?'来源两种净值口径存在分歧，相关收益指标待核':'来源净值口径筛查尚未通过');if(nav.quality!=='clean')return fail('来源质量标记待核，不计算波动与回撤');
+ if(!nav)return fail('净值历史待更新');if(nav.basis!=='forward-adjusted-from-daily-growth')return fail(nav.basis==='acc-ratio'?'累计净值口径':'该类收益口径另行展示');if(nav.crossCheck!=='agree')return fail('收益口径待核对');if(nav.quality!=='clean')return fail('净值序列待核对');
  if(/货币/.test(card.type||''))return fail('货币基金的收益展示口径不用于此净值回撤测算');
  if(/美元|欧元|港币|英镑|澳元|日元/.test(card.name||'')||card.currency&&card.currency!=='CNY')return fail('缺少统一人民币收益口径');
  if((nav.filledFromNav||0)>0||(nav.skipped||0)>0)return fail('序列有净值差分填补或跳过记录，不能按完整复权序列计算');

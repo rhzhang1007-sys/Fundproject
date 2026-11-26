@@ -14,11 +14,11 @@ test('标题中的数字也必须可追溯，来源日期可用于标题',()=>{
  assert.throws(()=>validateAIResult('{"title":"规模1000","points":[{"text":"产能772","sourceIds":["report"]}]}','summary',sources));
  assert.equal(validateAIResult('{"title":"2026资料","points":[{"text":"产能772","sourceIds":["report"]}]}','summary',sources).title,'2026资料');
 });
-test('格式不合格最多重试一次；HTTP拒绝不重复调用',async()=>{
+test('格式缺失保留原文要点且不追加付费调用；HTTP拒绝不重复调用',async()=>{
  const {requestAI}=await import('../dist/v08-ai.mjs');const old=globalThis.fetch;let calls=0;
  try{
   globalThis.fetch=async()=>({ok:true,json:async()=>({choices:[{message:{content:++calls===1?'NO_JSON':'{"title":"摘要","points":[{"text":"产能772","sourceIds":["report"]}]}'}}]})});
-  await requestAI({url:'https://example.com/api',key:'test',model:'test'},'summary',sources);assert.equal(calls,2);
+  const result=await requestAI({url:'https://example.com/api',key:'test',model:'test'},'summary',sources);assert.equal(calls,1);assert.equal(result.quality.kind,'source-excerpts');
   calls=0;globalThis.fetch=async()=>{calls++;return {ok:false,status:401};};
   await assert.rejects(requestAI({url:'https://example.com/api',key:'test',model:'test'},'summary',sources),/401/);assert.equal(calls,1);
  }finally{globalThis.fetch=old;}

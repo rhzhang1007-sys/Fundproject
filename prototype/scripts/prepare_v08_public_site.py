@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def prepare(root, destination):
     source = root / 'prototype/dist'
-    allowed = {'index.html', 'natural.css', 'v07.css', 'v08.css'}
+    allowed = {'index.html', 'natural.css', 'v07.css', 'v08.css', 'v15.css'}
     pending = ['v08.mjs']
     while pending:
         name = pending.pop()
@@ -42,6 +42,8 @@ def prepare(root, destination):
     if (source/'data/v12').exists():shutil.copytree(source/'data/v12',destination/'data/v12',dirs_exist_ok=True)
     if (source/'data/v13').exists():shutil.copytree(source/'data/v13',destination/'data/v13',dirs_exist_ok=True)
     if (source/'data/v14').exists():shutil.copytree(source/'data/v14',destination/'data/v14',dirs_exist_ok=True)
+    if (source/'data/v16').exists():shutil.copytree(source/'data/v16',destination/'data/v16',dirs_exist_ok=True)
+    if (source/'data/v17').exists():shutil.copytree(source/'data/v17',destination/'data/v17',dirs_exist_ok=True)
     catalog=json.loads((source/'data/catalog.json').read_text());catalog.pop('defaultWeights',None);catalog['sources']=[s for s in catalog.get('sources',[]) if s.get('visibility')!='internal']
     overnight=source/'data/v11'
     if overnight.exists():shutil.copytree(overnight,destination/'data/v11',dirs_exist_ok=True)

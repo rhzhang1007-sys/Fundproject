@@ -34,7 +34,7 @@ export function graphSubset(model,focus='portfolio') {
   if(focus.startsWith('stock')){
     const c=model.companies.find(c=>c.id===focus);return {kind:'company',root:c,companies:c?[c]:[],funds:c?model.funds.filter(f=>c.paths.some(p=>p.fundId===f.id)):[]};
   }
-  return {kind:'portfolio',root:null,funds:model.funds.slice(0,8),companies:model.companies.filter(c=>c.share>0).slice(0,10)};
+  return {kind:'portfolio',root:null,funds:model.funds.slice(0,12),companies:model.companies.filter(c=>c.share>0).slice(0,10)};
 }
 export function eventSelection(events,model,mode,id,now,older=false) {
   const end=String(now).slice(0,10),start=new Date(Date.parse(end+'T00:00:00Z')-29*86400000).toISOString().slice(0,10);

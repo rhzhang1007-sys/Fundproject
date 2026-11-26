@@ -12,7 +12,8 @@ export function validatePublicData(path,value){
   for(const [code,row] of Object.entries(value.funds))if(!/^[0-9A-Z]{1,12}$/.test(code)||!row||row.snapshot&&(!dated(row.snapshot.date)||row.snapshot.nav!=null&&!Number.isFinite(row.snapshot.nav))||row.asOf&&!dated(row.asOf))throw Error('每日基金日期或数值无效');
  }else if(path.startsWith('v12/posts/')){
   const kind=path.includes('/funds/')?'fund':'stock',code=path.split('/').at(-1).replace('.json','');
-  if(value.schemaVersion!==1||value.objectId!==kind+code||!Array.isArray(value.records)||value.records.length>30)throw Error('帖子正文分片无效');
+  if(value.schemaVersion!==1||value.objectId!==kind+code||!Array.isArray(value.records)||value.records.length>900)throw Error('帖子正文分片无效');
+  const days=new Map();for(const r of value.records){const n=(days.get(r.date)||0)+1;days.set(r.date,n);if(n>30)throw Error('单日帖子超过上限');}
   for(const r of value.records)if(r.objectId!==value.objectId||!dated(r.date)||!safeUrl(r.url)||r.content!=null&&typeof r.content!=='string'||!Array.isArray(r.comments)||r.comments.some(c=>typeof c.text!=='string'))throw Error('帖子或评论格式无效');
  }else if(path==='v10/coverage.json'){
   if(value.schemaVersion!==1||!value.scope)throw Error('覆盖信息无效');
@@ -53,4 +54,9 @@ export function mergePosts(a=[],b=[]){
  const sorted=[...map.values()].sort((x,y)=>y.date.localeCompare(x.date)||(y.publishedAt||'').localeCompare(x.publishedAt||'')),counts=new Map();return sorted.filter(r=>{const k=(r.objectId||'')+'|'+r.date,n=(counts.get(k)||0)+1;counts.set(k,n);return n<=30;});
 }
 
-export function mergeObservations(local={funds:{}},remote={funds:{}}){const funds={...local?.funds};for(const [code,row] of Object.entries(remote.funds||{})){const old=funds[code]||{},newer=(row.lastSnapshotFetchedAt||'')>(old.lastSnapshotFetchedAt||''),latest=(row.snapshot?.date||'')>(old.snapshot?.date||'')||row.snapshot?.date===old.snapshot?.date&&newer;funds[code]={...old,...row,snapshot:latest?row.snapshot:old.snapshot||row.snapshot,history:(row.history?.points?.length||0)>(old.history?.points?.length||0)?row.history:old.history||row.history};}return {schemaVersion:1,funds};}
+function mergeHistory(a,b){
+ if(!a?.points?.length)return b||a;if(!b?.points?.length)return a;
+ const rows=new Map(a.points.map(p=>[p[0],p]));for(const p of b.points){const old=rows.get(p[0]),same=old&&old[1]===p[1]&&(p[2]==null||old[2]===p[2]);rows.set(p[0],same?[p[0],p[1],p[2]??old[2],p[3]??old[3]]:p);}
+ const points=[...rows.values()].sort((x,y)=>x[0].localeCompare(y[0]));return {...a,...b,points,count:points.length};
+}
+export function mergeObservations(local={funds:{}},remote={funds:{}}){const funds={...local?.funds};for(const [code,row] of Object.entries(remote.funds||{})){const old=funds[code]||{},newer=(row.lastSnapshotFetchedAt||'')>(old.lastSnapshotFetchedAt||''),latest=(row.snapshot?.date||'')>(old.snapshot?.date||'')||row.snapshot?.date===old.snapshot?.date&&newer;funds[code]={...old,...row,snapshot:latest?row.snapshot:old.snapshot||row.snapshot,history:mergeHistory(old.history,row.history)};}return {schemaVersion:1,funds};}

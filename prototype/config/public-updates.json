@@ -60,12 +60,16 @@
     "enabled": true,
     "mode": "global-queue",
     "batchSeconds": 900,
-    "listBatchSeconds": 600,
+    "listBatchSeconds": 180,
     "pagesPerVisit": 3,
-    "detailsPerVisit": 30,
+    "detailsPerVisit": 3,
     "detailObjectsPerBatch": 34595,
     "collectionDays": 1,
-    "commentPagesPerVisit": 3
+    "commentPagesPerVisit": 2,
+    "repairBatchSeconds": 120,
+    "repairObjectsPerBatch": 4,
+    "dayBoundaryHourCST": 5,
+    "maxBatchesPerDay": 72
   },
   "retentionMode": "rolling-30-days",
   "newsLLM": {

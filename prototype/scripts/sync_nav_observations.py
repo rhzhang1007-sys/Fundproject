@@ -5,6 +5,15 @@ from pathlib import Path
 from build_global_foundation import load,write,shard
 ROOT=Path(__file__).resolve().parents[2]
 
+def merge_point(previous, incoming):
+    """A sparse same-price daily response must not erase known history fields."""
+    if not previous or previous[0]!=incoming[0]:return incoming
+    same_nav=previous[1]==incoming[1]
+    same_acc=incoming[2] is None or previous[2]==incoming[2]
+    if same_nav and same_acc:
+        return [incoming[0],incoming[1],incoming[2] if incoming[2] is not None else previous[2],incoming[3] if incoming[3] is not None else previous[3]]
+    return incoming
+
 def sync(root=ROOT,snapshot=None):
     root=Path(root);dist=root/'prototype/dist/data';snapshot=Path(snapshot) if snapshot else dist/'v12/nav/latest.json';payload=load(snapshot);known={o['code'] for o in load(dist/'v10/objects.json')['objects'] if o['kind']=='fund'};groups=defaultdict(list);unknown=[]
     for row in payload.get('funds',[]):
@@ -21,7 +30,7 @@ def sync(root=ROOT,snapshot=None):
             # Retain the fetched observation separately; a missing history is not invented.
             history=ob.get('history')
             if replace and history and history.get('status')=='ok' and row.get('nav') is not None:
-                points={p[0]:p for p in history.get('points',[])};points[row['date']]=[row['date'],row['nav'],row.get('accNav'),row.get('dayChange')];history['points']=[points[d] for d in sorted(points)];history['count']=len(points)
+                points={p[0]:p for p in history.get('points',[])};points[row['date']]=merge_point(points.get(row['date']),[row['date'],row['nav'],row.get('accNav'),row.get('dayChange')]);history['points']=[points[d] for d in sorted(points)];history['count']=len(points)
             ob['totalReturnVerified']=False
         write(path,data)
     report=dict(updated=updated,unknownCodes=unknown,asOf=payload.get('asOf'),source='daily-nav-source-observations',verifiedTotalReturn=False);write(dist/'v12/nav-sync-status.json',report);return report

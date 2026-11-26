@@ -1,0 +1,2 @@
+# Only used for reading PDF announcement text; HTML and the app use Node built-ins.
+pypdf==6.21.4

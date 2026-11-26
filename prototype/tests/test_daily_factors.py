@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import date,timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from compute_daily_factors import structure,portfolio_risk,expected_shortfall,historical_path,aligned_returns,capture_ratios,tracking_metrics
-from collect_nav_snapshot import parse_row,parse_mobile,merge_snapshots,collect
+from collect_nav_snapshot import parse_row,parse_mobile,merge_snapshots,collect,parse_daily_payload,parse_daily_row,parse_exchange_html
 from unittest.mock import patch
 from publish_news_shards import publish as publish_news
 from sync_nav_observations import sync
@@ -11,6 +11,24 @@ from update_market_observations import parse as market_parse
 from build_global_foundation import write,shard
 
 class FactorTests(unittest.TestCase):
+ def test_real_guide_layout_does_not_mislabel_growth_as_accumulated_nav(self):
+  raw=['000423','前海开源事件驱动混合A','QHKY','混合型-灵活','-0.65','5.07','4.45','1.18','-2.56','-0.28','14.91','19.01','3.44','','1','2026-11-25','2.135','-0.05','1','0.15%','10','1','1.50%','0.15%']
+  r=parse_row(','.join(raw));self.assertEqual(r['dayChange'],-.05);self.assertIsNone(r['accNav']);self.assertNotEqual(r['dayChange'],5.07)
+ def test_official_daily_nav_columns_and_etf_identity(self):
+  row=['516160','新能源ETF南方','XNYETF','1.7691','0.5469','1.8525','0.5726','-0.0834','-4.50']+['']*12
+  text='var db={datas:'+json.dumps([row])+',record:"1",curpage:"1",showday:["2026-11-25","2026-11-24"]}'
+  rows,total=parse_daily_payload(text,1,1000);self.assertEqual(total,1);self.assertEqual(rows[0]['nav'],1.7691);self.assertEqual(rows[0]['accNav'],.5469);self.assertEqual(rows[0]['dayChange'],-4.5);self.assertEqual(rows[0]['date'],'2026-11-25')
+  row[3]='--';r=parse_daily_row(row,['2026-11-25','2026-11-24']);self.assertEqual(r['date'],'2026-11-24');self.assertEqual(r['nav'],1.8525);self.assertIsNone(r['dayChange'])
+  with self.assertRaises(ValueError):parse_daily_payload(text,2,1000)
+ def test_retired_guide_snapshot_is_repaired_before_cached_reuse(self):
+  previous={'sourceUrl':'https://fund.eastmoney.com/data/FundGuideapi.aspx','funds':[{'code':'000423','date':'2026-11-25','nav':2.135,'accNav':-.05,'dayChange':5.07}]}
+  rows,_,_=merge_snapshots({},previous,'2026-11-26');self.assertIsNone(rows['000423']['accNav']);self.assertEqual(rows['000423']['dayChange'],-.05)
+  previous['funds'][0].update(accNav=2.2,dayChange=.23,filledFrom='fund-basic');rows,_,_=merge_snapshots({},previous,'2026-11-26');self.assertEqual(rows['000423']['accNav'],2.2);self.assertEqual(rows['000423']['dayChange'],.23)
+ def test_exchange_table_uses_nav_not_market_price_and_keeps_header_dates(self):
+  rows=[]
+  for i in range(100):
+   code=str(516160+i);cells=['','',str(i),code,f'<a href="/{code}.html">基金</a><a>行情</a>','指数型-股票','1.7691','0.5469','1.8525','0.5726','-0.0834','-4.50%','9999','-0.16%'];rows.append('<tr id="tr'+code+'">'+''.join('<td>'+c+'</td>' for c in cells)+'</tr>')
+  html='<div id="tableDiv"><nobr>2026-11-25</nobr><nobr>2026-11-24</nobr>'+''.join(rows)+'</div>';r=parse_exchange_html(html)[0];self.assertEqual(r['nav'],1.7691);self.assertEqual(r['accNav'],.5469);self.assertEqual(r['dayChange'],-4.5);self.assertEqual(r['name'],'基金');self.assertEqual(r['date'],'2026-11-25');self.assertNotEqual(r['nav'],9999)
  def test_equal_weights_hhi_and_observation_boundary(self):
   h=[dict(code=str(i),weightPercent=2.5) for i in range(20)];f=dict(periods=[dict(asOf='2026-06-30',holdings=h,complete=False)])
   s=structure([f],[1]);self.assertAlmostEqual(s['effective'],20);self.assertAlmostEqual(s['multiple'],1);self.assertEqual(s['coverage'],.5)

@@ -1,10 +1,10 @@
 # 默认AI与自选AI配置
 
-默认AI的服务端代码、网页切换和三类统一提示已实现。新API配置按用户要求留空，尚未调用真实共享模型。外置定时程序已有的GitHub Secret继续使用，不需要重复填写。
+默认AI、网页自选AI和统一提示词已实现。本机现有默认模型配置保留；公开交付中的API模板留空。GitHub定时采集不再调用观点或新闻聚合模型，无需新填模型密钥。
 
 ## 站方配置一次，访客使用默认AI
 
-1. 打开项目的 `prototype/.env.local`。本轮已创建空模板。该文件不进入Git、交付ZIP或静态网页。
+1. 打开项目的 `prototype/.env.local`。如果尚未创建，可从 `.env.example` 复制。该文件不进入Git、交付ZIP或静态网页。
 2. 私下填写以下三个值，不要把Key发到聊天或提交仓库：
 
 ```dotenv
@@ -40,3 +40,13 @@ WEB_LLM_MODEL=
 以后需要让其他用户直接使用默认AI，应部署本包Node服务，并通过同一HTTPS域名提供网页和 `/api/ai`。在服务端填写 `WEB_LLM_ORIGIN` 为该HTTPS站点的完整origin（例如 `https://your-domain.example`，不带路径或末尾斜杠），Key仍保存在服务端环境中。当前此项留空，允许本机localhost使用。
 
 GitHub Actions负责定时执行，不能当作持续运行的网页AI服务；GitHub Pages只托管静态文件，不能独立运行这个接口。本轮没有替用户注册托管服务、填Key或开启网站发布。
+
+## 2026-11-26更新
+
+界面使用新的通俗提示，结果自动保存至资料库；新闻先读取正文。PDF公告需要 `python3 -m pip install -r prototype/requirements-web.txt`，或指定已安装pypdf的 `WEB_PDF_PYTHON`。新功能不需要新增API Key。服务端正文缓存、用量记录和密钥都在私有目录，不能放入静态发布目录。
+
+## 2026-11-26连接修复
+
+原国内节点在本机持续连接超时；已按服务商文档确认国际节点，并在用户明确授权后将本机WEB_LLM_FALLBACK_URL设为https://api.zzz-api.top/v1/chat/completions。原地址和Key保留。只在连接尚未建立的故障下切换，收到HTTP响应或发送状态不明时不自动重发。成功节点短期复用；连接未建立的失败释放本次预留额度，已发生或无法确认的用量仍保留。公开模板的备用地址留空，其他部署由站方自行确认后填写，不自动给任何域名发送密钥。
+
+原页新闻摘要已通过真实模型调用与来源校验。官方节点说明：https://doc.zhizengzeng.com/doc-4296789 。

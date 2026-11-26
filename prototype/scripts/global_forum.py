@@ -14,20 +14,25 @@ from build_global_foundation import load,write,shard
 from public_transport import CurlPublicFetcher
 from publish_object_activity import publish
 from public_comments import read_comments
+from forum_schedule import collection_day,batch_allowed
+from public_post_material import merge_material, hydrate, pending
 
 ROOT=Path(__file__).resolve().parents[2]
 
 def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
     root=Path(root);dist=root/'prototype/dist/data';config=config or load(root/'prototype/config/public-updates.json')
     if config.get('enabled') is not True or config.get('forumDaily',{}).get('enabled') is not True:return dict(status='disabled',networkRequests=0)
-    day=as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date();target=(day-timedelta(days=1)).isoformat();window=(day-timedelta(days=29)).isoformat();now=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
+    day=as_of or collection_day(config.get('forumDaily',{}));target=(day-timedelta(days=1)).isoformat();window=(day-timedelta(days=29)).isoformat();now=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
     identities=load(dist/'v10/objects.json')['objects']
     funds=[x for x in identities if x['kind']=='fund'];stocks=[x for x in identities if x['kind']=='stock']
     registry=[x for pair in zip_longest(funds,stocks) for x in pair if x is not None];settings=config.get('forumDaily',{})
     pointer=dist/'v10/corpus-pointer.json';marker=root/'prototype/.public-corpus/checkpoint.json'
     if pointer.exists() and (not marker.exists() or load(marker).get('sha256')!=load(pointer).get('sha256')):raise ValueError('Restore the private corpus checkpoint before resuming')
     state_path=dist/'v10/forum-state.json';state=load(state_path) if state_path.exists() else dict(schemaVersion=1,cursor=0,detailCursor=0,objects={})
-    if state.get('cooldownUntil','')>now:return dict(status='source-cooldown',scope=len(registry),cooldownUntil=state['cooldownUntil'])
+    allowed,gate_reason=batch_allowed(state,settings,day,now)
+    if not allowed:return dict(status=gate_reason,scope=len(registry),networkRequests=0)
+    if state.get('batchDate')!=day.isoformat():state['batchDate']=day.isoformat();state['batchesStarted']=0
+    state['batchesStarted']=state.get('batchesStarted',0)+1
     deadline=deadline or time.monotonic()+int(settings.get('batchSeconds',900))
     live_fetch=fetch is None
     fetch=fetch or CurlPublicFetcher(config.get('requestIntervalSeconds',1),deadline=deadline)
@@ -52,6 +57,10 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
         state['cooldownUntil']=(datetime.now(ZoneInfo('Asia/Shanghai'))+timedelta(hours=24)).isoformat(timespec='seconds');state['lastError']='source-refused'
     remaining=max(1,deadline-time.monotonic());list_deadline=min(deadline-min(60,remaining/4),time.monotonic()+int(settings.get('listBatchSeconds',600)))
     try:
+        from forum_repair import repair_queue
+        repairs=repair_queue(root,state,registry,activity,checkpoint,min(deadline-60,time.monotonic()+int(settings.get('repairBatchSeconds',120))),limit=int(settings.get('repairObjectsPerBatch',4))) if live_fetch else {'attempted':0,'newReadableBodies':0}
+        # Repairs have their own reserved budget; the list phase is timed afresh.
+        list_deadline=min(deadline-60,time.monotonic()+int(settings.get('listBatchSeconds',180)))
         while visited<min(len(registry),int(settings.get('maxVisitsPerBatch',len(registry)))) and time.monotonic()<list_deadline:
             i=state['cursor']%len(registry);obj=registry[i];state['cursor']=(i+1)%len(registry);visited+=1
             oid=obj['id'];task=state['objects'].setdefault(oid,{})
@@ -80,7 +89,7 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                             last=date;dates.append(date)
                         row=u._forum_row(x,code,day.isoformat())
                         if scan['from']<=row['date']<=scan['to']:
-                            old=posts.get(row['id'],{});combined={**old,**row}
+                            old=posts.get(row['id'],{});combined=merge_material(old,row)
                             if old.get('commentCount')!=row.get('commentCount') and combined.get('coverage'):
                                 combined['coverage']={**combined['coverage'],'comments':'partial'}
                                 combined.pop('commentCursor',None)
@@ -135,40 +144,43 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
                 existing={r['id']:r for r in forum['records']};existing.update({r['id']:r for r in result['records']})
                 forum['records']=list(existing.values());checkpoint()
             except (ValueError,RuntimeError,OSError) as exc:errors.append(dict(objectId=obj['id'],stage='sina',reason=str(exc)[:160]))
-        candidates=[obj for obj in registry if obj['id'] in state['objects']]
+        oldest=max(window,(day-timedelta(days=3)).isoformat())
+        candidates=[]
+        for obj in registry:
+            if obj['id'] not in state['objects']:continue
+            forum=activity(obj)
+            rows=[r for r in forum['records'] if oldest<=r['date']<=target and r.get('source')!='新浪股市汇' and pending(r,now)]
+            if rows:candidates.append((obj,rows))
+        candidates.sort(key=lambda pair:(state['objects'][pair[0]['id']].get('lastDetailAt',''),pair[0]['id']))
         news_model_status={'status':'separate-news-job'}
-        for _ in range(min(len(candidates),int(settings.get('detailObjectsPerBatch',30)))):
-            if time.monotonic()>deadline-35 or not candidates:break
-            i=state['detailCursor']%len(candidates);state['detailCursor']=(i+1)%len(candidates);obj=candidates[i];forum=activity(obj);oid=obj['id'];code=('of' if obj['kind']=='fund' else '')+obj['code']
-            by_day=defaultdict(list);visit_details=0
-            for row in forum['records']:by_day[row['date']].append(row)
-            for date,rows in sorted(by_day.items(),reverse=True):
-                if date!=target:continue
-                rows=sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:max(1,int(config.get('maxPostsPerObject',30)))]
-                done=0
-                for row in rows:
-                    if row.get('coverage',{}).get('body')=='complete':continue
-                    if visit_details>=int(settings.get('detailsPerVisit',5)) or time.monotonic()>deadline-35:break
-                    try:
-                        row.update(u.detail_record(fetch(row['url']),row.get('commentCount'),max_chars=500000));done+=1;visit_details+=1;body_attempts+=1;enriched+=row.get('coverage',{}).get('body')=='complete'
-                    except u.SourceRefused:refusal();raise
-                    except TimeoutError:raise
-                    except (ValueError,RuntimeError,OSError) as exc:errors.append(dict(objectId=oid,stage='body',reason=str(exc)[:160]));break
-                for row in rows:
-                    if time.monotonic()>deadline-35:break
-                    if row.get('coverage',{}).get('body')=='complete' and row.get('coverage',{}).get('comments')!='complete':
-                        read_comments(fetch,row,int(settings.get('commentPagesPerVisit',3)))
-                # Persist source material even when a comment endpoint is incomplete.
-                state['objects'][oid]['bodyCoverage']=dict(day=date,selected=len(rows),complete=sum(x.get('coverage',{}).get('body')=='complete' for x in rows),commentsComplete=sum(x.get('coverage',{}).get('comments')=='complete' for x in rows))
-                forum['claims']=[]
-                checkpoint()
-    except u.SourceRefused:errors.append(dict(stage='public-source',reason='source-refused; global 24-hour cooldown'))
+        material_fetch=CurlPublicFetcher(config.get('requestIntervalSeconds',1),timeout=12,deadline=deadline,max_attempts=1) if live_fetch else fetch
+        for obj,rows in candidates[:int(settings.get('detailObjectsPerBatch',34595))]:
+            if time.monotonic()>deadline-35:break
+            oid=obj['id'];forum=activity(obj)
+            # Give each object a small turn; failed pages cannot starve all peers.
+            rows.sort(key=lambda r:(r.get('materialCheckedAt',''),-int(bool(r.get('content'))),r['date'],r['id']))
+            for row in rows[:int(settings.get('detailsPerVisit',3))]:
+                if time.monotonic()>deadline-35:break
+                before=row.get('coverage',{}).get('body')=='complete'
+                body_attempts+=int(not before)
+                hydrate(material_fetch,row,int(settings.get('commentPagesPerVisit',3)))
+                enriched+=int(not before and row.get('coverage',{}).get('body')=='complete')
+                if row.get('materialErrors'):errors.append(dict(objectId=oid,postId=row['id'],stage='material',reasons=row['materialErrors']))
+                state['objects'][oid]['lastDetailAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='microseconds')
+                activity(obj);checkpoint()
+            selected=[r for r in forum['records'] if r['date']==target]
+            state['objects'][oid]['bodyCoverage']=dict(day=target,selected=len(selected),complete=sum(x.get('coverage',{}).get('body')=='complete' for x in selected),commentsComplete=sum(x.get('coverage',{}).get('comments')=='complete' for x in selected))
+            forum['claims']=[];activity(obj);checkpoint()
+    except u.SourceRefused:
+        refusal();errors.append(dict(stage='public-source',reason='source-refused; global 24-hour cooldown'))
     except TimeoutError:errors.append(dict(stage='batch',reason='time-budget; remaining work retained'))
     finally:
-        state['updatedAt']=now;checkpoint();u.persist_usage();write(dist/'v08/llm-usage.json',u.LLM_STATE);u.LLM_LIVE_BILLING=False
-    coverage=publish(root,day)
-    result=dict(schemaVersion=1,status='partial' if not coverage['forum']['allMaterialComplete'] or errors else 'success',scope=len(registry),seconds=round(time.monotonic()-started,3),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,bodyAttempts=body_attempts,postLimitPerObjectPerDay=max(1,int(config.get('maxPostsPerObject',30))),scheduledOpinionAggregation=False,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=getattr(fetch,'calls',None))
-    write(dist/'v10/forum-batch-status.json',result);return result
+        state['updatedAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds');checkpoint();u.persist_usage();write(dist/'v08/llm-usage.json',u.LLM_STATE);u.LLM_LIVE_BILLING=False
+    coverage=publish(root,as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date(),forum_target=target)
+    from forum_quality import audit
+    health=audit(root,day)
+    result=dict(schemaVersion=1,status='partial' if not coverage['forum']['allMaterialComplete'] or errors else 'success',scope=len(registry),seconds=round(time.monotonic()-started,3),visited=visited,sourcePages=pages,completedWindows=listed,enrichedPosts=enriched,bodyAttempts=body_attempts,postLimitPerObjectPerDay=max(1,int(config.get('maxPostsPerObject',30))),scheduledOpinionAggregation=False,coverage=coverage['forum'],errors=errors,newsModel=locals().get('news_model_status',{'status':'pending'}),modelCircuit=u.MODEL_CIRCUIT_ERROR,networkRequests=(getattr(fetch,'calls',0)+(getattr(locals().get('material_fetch'),'calls',0) if locals().get('material_fetch') is not fetch else 0)) if live_fetch else None,materialRequests=getattr(locals().get('material_fetch'),'calls',None) if live_fetch else None)
+    result['health']={k:health[k] for k in ['status','sampleComplete','retryQueueSize','integrityErrorCount']};result['repairs']=locals().get('repairs',{'attempted':0});write(dist/'v10/forum-batch-status.json',result);return result
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--collect',action='store_true');p.add_argument('--root',type=Path,default=ROOT);a=p.parse_args()

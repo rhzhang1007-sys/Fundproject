@@ -7,8 +7,8 @@ from urllib.parse import urlencode,urlparse
 from refresh_public_data import SourceRefused
 
 class CurlPublicFetcher:
-    def __init__(self,interval=1,timeout=25,deadline=None):
-        self.interval=max(1,float(interval));self.timeout=timeout;self.previous=0;self.deadline=deadline;self.refused=False;self.calls=0
+    def __init__(self,interval=1,timeout=25,deadline=None,max_attempts=3):
+        self.interval=max(1,float(interval));self.timeout=timeout;self.previous=0;self.deadline=deadline;self.refused=False;self.calls=0;self.max_attempts=max(1,min(3,int(max_attempts)))
     def __call__(self,url,params=None,binary=False):
         if self.refused:raise SourceRefused('Public source refused; stop run')
         host=urlparse(url).hostname or ''
@@ -20,7 +20,7 @@ class CurlPublicFetcher:
                  'https://www.csindex.com.cn/' if host.endswith('csindex.com.cn') else
                  'https://finance.sina.com.cn/' if 'sina' in host else 'https://www.cninfo.com.cn/')
         last=None
-        for attempt in range(3):
+        for attempt in range(self.max_attempts):
             if self.deadline and time.monotonic()+self.timeout>self.deadline:raise TimeoutError('Daily collection deadline reached')
             wait=self.interval-(time.monotonic()-self.previous)
             if wait>0:time.sleep(wait)
@@ -34,5 +34,5 @@ class CurlPublicFetcher:
             if len(content)>8_000_000:raise ValueError('Public response too large')
             if r.returncode==0 and status==b'200' and content:return content if binary else content.decode('utf-8-sig')
             last='HTTP '+status.decode(errors='replace') if status else 'transport failure'
-            if attempt<2:time.sleep(1.5*(attempt+1))
+            if attempt<self.max_attempts-1:time.sleep(1.5*(attempt+1))
         raise RuntimeError('Public source unavailable: '+str(last))

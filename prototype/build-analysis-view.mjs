@@ -1,5 +1,6 @@
 // Read existing WB/public snapshots and aggregate display data. No HTTP or collection.
 import {readFile,writeFile,mkdir,rename,stat,readdir} from 'node:fs/promises';
+import {buildResearch} from './build-research-view.mjs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 import {V7_METHOD,feeParts,peerKey,names,checkedNav,navMetrics,concentrationTrend,quantile,rSquared,scoreFactors} from './dist/v14-compute.mjs';
 import {objectShard as shard} from './dist/v10-objects.mjs';
@@ -27,7 +28,8 @@ export async function buildView({root=ROOT,source=null,asOf=null,navSource=null}
   // shards repeated one portfolio for 5,563 different codes and are isolated.
   for(let i=0;i<100;i++){const d=JSON.parse(await snapshot(path.join(dist,`v11/relationships/${String(i).padStart(2,'0')}.json`)));for(const [code,r]of Object.entries(d.funds)){if(r.fundCode!==code)throw Error('Accepted holdings identity mismatch');details[code]={periods:r.periods.map(p=>({...p,rows:p.holdings.map(x=>({code:x.code,name:x.name,weight:x.weightPercent})),complete:p.complete===true}))};}}
  }else{
-  for(let i=0;i<100;i++){const k=String(i).padStart(2,'0');try{Object.assign(nav,(await json(path.join(out,`nav/${k}.json`))).funds);Object.assign(details,(await json(path.join(out,`holdings/${k}.json`))).funds);Object.assign(states,(await json(path.join(out,`funds/${k}.json`))).funds);}catch{}}
+  for(let i=0;i<100;i++){const k=String(i).padStart(2,'0');try{Object.assign(nav,(await json(path.join(out,`nav/${k}.json`))).funds);Object.assign(states,(await json(path.join(out,`funds/${k}.json`))).funds);}catch{}
+   const accepted=(await json(path.join(dist,`v11/relationships/${k}.json`))).funds;for(const [code,r]of Object.entries(accepted)){if(r.fundCode!==code)throw Error('Accepted holdings identity mismatch');details[code]={periods:r.periods.map(p=>({...p,rows:p.holdings.map(x=>({code:x.code,name:x.name,weight:x.weightPercent})),complete:p.complete===true}))};}}
   try{inputs.push(...(await json(path.join(out,'manifest.json'))).inputs);}catch{}
  }
  const rawMap=new Map((rawBasics||[]).map(r=>[r.code,r]));
@@ -43,7 +45,8 @@ export async function buildView({root=ROOT,source=null,asOf=null,navSource=null}
   }
  }
  const codeHash=createHash('sha256').update(await readFile(fileURLToPath(import.meta.url))).update(await readFile(path.join(HERE,'dist/v14-compute.mjs'))).digest('hex');
- const version=createHash('sha256').update(codeHash+V7_METHOD+asOf+JSON.stringify(inputs)+JSON.stringify(Object.entries(nav).map(([c,r])=>[c,r.to,r.count,r.quality]))).digest('hex').slice(0,16),managers=new Map(),records=new Map();
+ const contentHash=createHash('sha256');for(const [label,items]of [['nav',Object.entries(nav)],['holdings',Object.entries(details)],['profiles',[...cards]]])for(const [code,value]of items.sort((a,b)=>a[0].localeCompare(b[0])))contentHash.update(label+'\0'+code+'\0'+JSON.stringify(value)+'\n');
+ const version=createHash('sha256').update(codeHash+V7_METHOD+asOf+JSON.stringify(inputs)+contentHash.digest('hex')).digest('hex').slice(0,16),managers=new Map(),records=new Map();
  for(const obj of registry){const card=cards.get(obj.code)||obj,raw=rawMap.get(obj.code),company=raw?.managerCompany||card.managerCompany||'',managerNames=names(raw?.managers??card.managers);for(const name of managerNames){const key=company+'|'+name;const m=managers.get(key)||{key,name,company,count:0};m.count++;managers.set(key,m);}}
  const singleIndex={};for(const card of cards.values()){const k=card.trackingIndex?.code;if(k)(singleIndex[k]??=[]).push(card);}
  const groups=new Map();
@@ -78,8 +81,9 @@ export async function buildView({root=ROOT,source=null,asOf=null,navSource=null}
   for(const r of records.values()){if(shard(r.code)!==k)continue;const changes=[...new Map(changedEvents.filter(([id,e])=>id===r.id&&e.date<=asOf&&e.date>=new Date(Date.parse(asOf)-89*86400000).toISOString().slice(0,10)).map(([,e])=>[e.id,{id:e.id,date:e.date,title:e.title,url:e.url}])).values()];funds[r.code]={code:r.code,status:r.status,metrics:r.metrics,peer:r.peer,peerR2:r.peerR2||{ready:false,reason:'需至少30个其他同类及250个共同日收益'},peerScore:r.peerScore||{ready:false,reason:'缺少类型或规模分组'},feeCompare:r.feeCompare||feeCompare(r),managerDetails:r.managerDetails,managerChanges:changes,managerChangeWindow:'仅已收录资料（当前主要为近30天）',trend:r.trend};if(r.metrics.ready)usable++;if(r.adjusted)ns[r.code]=r.adjusted;if(r.detailPeriods.length)hs[r.code]={periods:r.detailPeriods};}
   await write(path.join(stage,`funds/${k}.json`),{schemaVersion:1,version,funds});await write(path.join(stage,`nav/${k}.json`),{schemaVersion:1,version,funds:ns});await write(path.join(stage,`holdings/${k}.json`),{schemaVersion:1,version,funds:hs});
  }
- const manifest={schemaVersion:1,version,method:V7_METHOD,asOf,builtAt:new Date().toISOString(),funds:records.size,withAdjustedHistory:Object.keys(nav).length,usableRisk:usable,inputs,calendar,verifiedTotalReturn:false,waitingForWBNextBatch:true,collectionPerformed:false,peerWindow:{from:start,to:end,returns:250}};
+ let finalBatch=false;try{finalBatch=(await json(path.join(dist,'v11/final-import-status.json'))).finalBatch===true;}catch{}
+ const manifest={schemaVersion:1,version,method:V7_METHOD,asOf,builtAt:new Date().toISOString(),funds:records.size,withAdjustedHistory:Object.keys(nav).length,usableRisk:usable,inputs,calendar,verifiedTotalReturn:false,waitingForWBNextBatch:!finalBatch,collectionPerformed:false,peerWindow:{from:start,to:end,returns:250}};
  await write(path.join(stage,'manifest.json'),manifest);await mkdir(out,{recursive:true});for(const folder of ['funds','nav','holdings']){await mkdir(path.join(out,folder),{recursive:true});for(const file of await readdir(path.join(stage,folder)))await write(path.join(out,folder,file),await json(path.join(stage,folder,file)));}await write(path.join(out,'manifest.json'),manifest);
  return {version,funds:records.size,withAdjustedHistory:Object.keys(nav).length,usableRisk:usable,seconds:(Date.now()-started)/1000,collectionPerformed:false};
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){const a=process.argv.slice(2),arg=k=>a.includes(k)?a[a.indexOf(k)+1]:null;console.log(JSON.stringify(await buildView({source:arg('--source'),asOf:arg('--as-of'),navSource:arg('--nav')})));}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){const a=process.argv.slice(2),arg=k=>a.includes(k)?a[a.indexOf(k)+1]:null;const display=await buildView({source:arg('--source'),asOf:arg('--as-of'),navSource:arg('--nav')});console.log(JSON.stringify({...display,research:await buildResearch({root:ROOT})}));}

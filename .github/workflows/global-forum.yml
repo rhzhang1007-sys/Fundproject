@@ -1,8 +1,8 @@
 name: Continue global forum queue
 on:
   schedule:
-    # Continue every 20 minutes; one shared writer prevents overlapping budgets/commits.
-    - cron: '7,27,47 * * * *'
+    # Continue every 20 minutes; 05:05 China time rolls to the new target; overnight batches finish prior work.
+    - cron: '5,25,45 * * * *'
   workflow_dispatch:
     inputs:
       verify_checkpoint_only:
@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,9 +38,18 @@ jobs:
         id: gate
         run: |
           python - <<'PYTHON' >> "$GITHUB_OUTPUT"
-          import json
+          import json,sys
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          sys.path.insert(0,'prototype/scripts')
+          from forum_schedule import collection_day,batch_allowed
           c=json.load(open('prototype/config/public-updates.json'))
-          print('enabled='+str(c.get('enabled') is True and c.get('forumDaily',{}).get('enabled') is True).lower())
+          p=Path('prototype/dist/data/v10/forum-state.json');state=json.loads(p.read_text()) if p.exists() else {}
+          allowed,reason=batch_allowed(state,c.get('forumDaily',{}),collection_day(c.get('forumDaily',{})),datetime.now(ZoneInfo('Asia/Shanghai')).isoformat())
+          enabled=c.get('enabled') is True and c.get('forumDaily',{}).get('enabled') is True
+          print('enabled='+str(enabled and (allowed or '${{ inputs.verify_checkpoint_only }}'=='true')).lower())
+          print('reason='+reason)
           PYTHON
       - name: Restore private resumable corpus
         id: corpus_restore
@@ -50,6 +60,24 @@ jobs:
       - name: Resume yesterday posts and comments without model calls
         if: steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
         run: python prototype/scripts/global_forum.py --collect
+      - name: Audit actual coverage and report partial collection
+        if: always() && steps.corpus_restore.outcome == 'success' && inputs.verify_checkpoint_only != true
+        run: |
+          python - <<'PYTHON'
+          import os
+          import forum_quality
+          # The regular collector already saved its rotating retry plan.
+          r=forum_quality.audit(queue=False)
+          text=(f"### Forum coverage: {r['targetDay']}\n"
+                f"Status: **{r['status']}**; list windows {r['listWindowsComplete']}/{r['scope']}.\n\n"
+                f"Selected posts: {r['selectedPosts']}; complete readable bodies: {r['readableCompleteBodies']}; acquired comments: {r['acquiredComments']}.\n\n"
+                f"Sample complete: {r['sampleComplete']}/{len(r['sample'])}; retry tasks: {r['retryQueueSize']}; integrity errors: {r['integrityErrorCount']}.\n")
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write(text)
+          if r['status']!='ready':print('::warning::Forum content is partial or delayed; successful execution does not mean complete coverage.')
+          raise SystemExit(2 if r['integrityErrorCount'] else 0)
+          PYTHON
+        env:
+          PYTHONPATH: prototype/scripts
       - name: Verify restored cursor matches corpus
         if: inputs.verify_checkpoint_only == true
         run: |
@@ -95,6 +123,11 @@ jobs:
           git commit -m 'Continue full-directory forum queue and public activity'
           git -c rebase.autoStash=true pull --rebase
           git push
+      - name: Continue a productive partial batch
+        if: success() && steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/forum_continue.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,6 +135,7 @@ jobs:
           path: |
             prototype/dist/data/v10/coverage.json
             prototype/dist/data/v10/forum-batch-status.json
+            prototype/dist/data/v10/forum-health.json
             prototype/dist/data/v08/llm-usage.json
           if-no-files-found: ignore
           retention-days: 7

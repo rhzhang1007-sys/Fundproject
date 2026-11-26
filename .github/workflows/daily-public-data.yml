@@ -17,6 +17,10 @@ on:
     - cron: '50 0 * * *'
     - cron: '31 1,3 * * *'
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Daily resolved index observations']
+    types: [completed]
+    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -25,6 +29,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: ${{ github.event_name == 'push' && 'Validate public data code' || 'Collect public data' }}
     runs-on: ubuntu-latest
     timeout-minutes: 50

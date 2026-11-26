@@ -1,0 +1,24 @@
+name: Check forum collector heartbeat
+on:
+  schedule:
+    - cron: '18,48 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: forum-collector-watchdog
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resume an overdue collector when no run is active
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/forum_watchdog.py

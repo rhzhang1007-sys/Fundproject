@@ -6,8 +6,8 @@ import json
 from refresh_public_data import public_event_allowed
 from build_global_foundation import load,write,shard
 
-def publish(root,as_of=None):
-    root=Path(root);dist=root/'prototype/dist/data';today=as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date();start=(today-timedelta(days=29)).isoformat();end=today.isoformat();target=(today-timedelta(days=1)).isoformat()
+def publish(root,as_of=None,forum_target=None):
+    root=Path(root);dist=root/'prototype/dist/data';today=as_of or datetime.now(ZoneInfo('Asia/Shanghai')).date();start=(today-timedelta(days=29)).isoformat();end=today.isoformat();target=forum_target or (today-timedelta(days=1)).isoformat()
     registry=load(dist/'v10/objects.json')['objects'];known={x['id'] for x in registry};groups={}
     for kind in ['fund','stock']:
         for i in range(100):
@@ -71,7 +71,7 @@ def publish(root,as_of=None):
             for r in forum.get('records',[]):by_day.setdefault(r['date'],[]).append(r)
             forum['records']=[r for rows in by_day.values() for r in sorted(rows,key=lambda r:(r.get('publishedAt') or r['date'],r['id']),reverse=True)[:30]]
             records=[]
-            for row in sorted((r for r in forum.get('records',[]) if r['date']<=target),key=lambda r:(r['date'],r.get('publishedAt') or '',r['id']),reverse=True)[:30]:
+            for row in sorted((r for r in forum.get('records',[]) if r['date']<=target),key=lambda r:(r['date'],r.get('publishedAt') or '',r['id']),reverse=True)[:900]:
                 item={k:row.get(k) for k in ['id','objectId','title','url','date','publishedAt','source','readCount','commentCount','content','coverage','boardVerified','nativeBoard']}
                 item['comments']=[{k:c.get(k) for k in ['id','text','at','replyTo']} for c in row.get('comments',[])]
                 records.append(item)
@@ -88,7 +88,7 @@ def publish(root,as_of=None):
     # Retired rolling-window files carry no forever-public copies of old comments.
     for old in (dist/'v12/posts').glob('*/*.json'):
         if old not in active_post_paths:old.unlink()
-    state_path=dist/'v10/forum-state.json';state=load(state_path) if state_path.exists() else {};states=state.get('objects',{});target=(today-timedelta(days=1)).isoformat();complete=sum(x.get('throughDay','')>=target for x in states.values())
+    state_path=dist/'v10/forum-state.json';state=load(state_path) if state_path.exists() else {};states=state.get('objects',{});target=forum_target or (today-timedelta(days=1)).isoformat();complete=sum(x.get('throughDay','')>=target for x in states.values())
     selected=[r for g in groups.values() for v in g['objects'].values() for r in v.get('forum',{}).get('records',[]) if r['date']==target]
     bodies=sum(r.get('coverage',{}).get('body')=='complete' for r in selected);comments=sum(r.get('coverage',{}).get('comments')=='complete' for r in selected)
     coverage=dict(schemaVersion=1,scope={'funds':sum(x['kind']=='fund' for x in registry),'stocks':sum(x['kind']=='stock' for x in registry),'allDirectoryIdentitiesQueued':True,'basis':'known-source-directory; not confirmed regulatory universe'},asOf=end,forum={'targetDay':target,'listedThroughTarget':complete,'pending':len(registry)-complete,'allComplete':complete==len(registry),'allMaterialComplete':complete==len(registry) and bodies==len(selected) and comments==len(selected),'selectedPostsOnTarget':len(selected),'bodiesCompleteOnTarget':bodies,'commentsCompleteOnTarget':comments,'objectsWithStoredPosts':sum(bool(v.get('forum',{}).get('records')) for g in groups.values() for v in g['objects'].values()),'scheduledOpinionAggregation':False,'postLimitPerObjectPerDay':30,'commentsMayBePartial':True},news={'retentionDays':30,'lastCheckedAt':news_source.get('lastCheckedAt') or news_source.get('builtAt'),'records':sum(start<=e['date']<=end for e in events),'unassignedRecords':sum(any(t.get('kind')=='unassigned' for t in e.get('entities',[])) for e in events),'unresolvedIdentities':sorted(orphan)},publicLibrary={'identityShells':len(registry),'fundDetailRecords':load(dist/'v10/foundation-manifest.json')['fundDetails'],'fullTextCoverage':'partial; never implied by identity shells'})

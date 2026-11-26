@@ -1,4 +1,7 @@
-import json,sys,unittest
+import json,sys,unittest,tempfile
+from unittest.mock import patch
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from datetime import datetime
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
@@ -24,4 +27,13 @@ class Sources(unittest.TestCase):
   detail="<script>var pageConfig={bid:'1',tid:'2'}</script><div id='thread_content'>正文<strong>数字10</strong></div><div class='iltp_time'>昨天15:00</div><span>回复(1)</span><p id='pContent_2'>回复原文</p>"
   s.detail(detail,rows[0],datetime(2026,11,25,17));self.assertEqual(rows[0]['coverage']['comments'],'complete');self.assertIn('数字10',rows[0]['content']);self.assertEqual(rows[0]['comments'][0]['text'],'回复原文')
   with self.assertRaises(ValueError):s.listing(text,'sh600000','stock600000',datetime(2026,11,25,17))
+ def test_known_sina_post_still_reads_body_without_listing(self):
+  from forum_object import collect
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);folder=root/'prototype/dist/data/v10';folder.mkdir(parents=True);(folder/'objects.json').write_text(json.dumps({'objects':[{'id':'stock300750','kind':'stock','code':'300750'}]}))
+   day=(datetime.now(ZoneInfo('Asia/Shanghai')).date()-timedelta(days=1)).isoformat();initial={'records':[{'id':'sina:1:2','source':'新浪股市汇','objectId':'stock300750','date':day,'url':'https://guba.sina.com.cn/?s=thread&bid=1&tid=2','coverage':{'body':'unknown','comments':'unknown'}}]}
+   def detail(html,row,now):row.update(content='正文',comments=[],coverage={'body':'complete','comments':'complete'});return None
+   with patch('forum_object.sina.read_html',return_value='public body') as read,patch('forum_object.sina.detail',side_effect=detail),patch('forum_object.sina.listing',side_effect=AssertionError('No list request')):
+    value=collect(root,'stock300750',day,seconds=60,providers=('sina',),initial=initial,known_only=True,post_ids=['sina:1:2'])
+   self.assertEqual(read.call_count,1);self.assertEqual(value['status'],'complete');self.assertEqual(value['records'][0]['content'],'正文')
 if __name__=='__main__':unittest.main()
