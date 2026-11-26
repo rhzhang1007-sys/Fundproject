@@ -35,6 +35,10 @@ class GlobalTests(unittest.TestCase):
   two=g.run(root,cfg,fetch,date(2026,11,24),time.monotonic()+120);self.assertEqual(two['coverage']['pending'],0);self.assertIn(('of000001',2),pages)
   data=json.loads((root/'prototype/.public-corpus/activity/funds/01.json').read_text());self.assertEqual(len(data['objects']['fund000001']['forum']['records']),1)
   public=json.loads((d/'v10/activity/funds/01.json').read_text());self.assertEqual(public['objects']['fund000001']['forum']['records'][0]['id'],'1');self.assertEqual(public['objects']['fund000001']['forum']['storedPostCount'],1)
+ def test_legacy_null_coverage_remains_pending_without_crashing_publish(self):
+  root,d,cfg=self.fixture();write(root/'prototype/.public-corpus/activity/funds/01.json',{'objects':{'fund000001':{'news':[],'forum':{'records':[{'id':'42','objectId':'fund000001','date':'2026-11-23','title':'已收录标题','coverage':None,'comments':[]}]}}}})
+  result=g.run(root,cfg,lambda url:json.dumps({'rc':1,'re':[]}),date(2026,11,24),time.monotonic()+120)
+  self.assertEqual(result['status'],'partial');self.assertEqual(result['coverage']['bodiesCompleteOnTarget'],0);self.assertEqual(result['coverage']['selectedPostsOnTarget'],1)
  def test_refusal_stops_every_object_and_retains_global_cooldown(self):
   root,d,cfg=self.fixture();calls=[]
   def denied(url):calls.append(url);raise u.SourceRefused('403')

@@ -161,15 +161,15 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
             rows.sort(key=lambda r:(r.get('materialCheckedAt',''),-int(bool(r.get('content'))),r['date'],r['id']))
             for row in rows[:int(settings.get('detailsPerVisit',3))]:
                 if time.monotonic()>deadline-35:break
-                before=row.get('coverage',{}).get('body')=='complete'
+                before=(row.get('coverage') or {}).get('body')=='complete'
                 body_attempts+=int(not before)
                 hydrate(material_fetch,row,int(settings.get('commentPagesPerVisit',3)))
-                enriched+=int(not before and row.get('coverage',{}).get('body')=='complete')
+                enriched+=int(not before and (row.get('coverage') or {}).get('body')=='complete')
                 if row.get('materialErrors'):errors.append(dict(objectId=oid,postId=row['id'],stage='material',reasons=row['materialErrors']))
                 state['objects'][oid]['lastDetailAt']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='microseconds')
                 activity(obj);checkpoint()
             selected=[r for r in forum['records'] if r['date']==target]
-            state['objects'][oid]['bodyCoverage']=dict(day=target,selected=len(selected),complete=sum(x.get('coverage',{}).get('body')=='complete' for x in selected),commentsComplete=sum(x.get('coverage',{}).get('comments')=='complete' for x in selected))
+            state['objects'][oid]['bodyCoverage']=dict(day=target,selected=len(selected),complete=sum((x.get('coverage') or {}).get('body')=='complete' for x in selected),commentsComplete=sum((x.get('coverage') or {}).get('comments')=='complete' for x in selected))
             forum['claims']=[];activity(obj);checkpoint()
     except u.SourceRefused:
         refusal();errors.append(dict(stage='public-source',reason='source-refused; global 24-hour cooldown'))
