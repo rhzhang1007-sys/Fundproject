@@ -39,6 +39,13 @@ class GlobalTests(unittest.TestCase):
   root,d,cfg=self.fixture();write(root/'prototype/.public-corpus/activity/funds/01.json',{'objects':{'fund000001':{'news':[],'forum':{'records':[{'id':'42','objectId':'fund000001','date':'2026-11-23','title':'已收录标题','coverage':None,'comments':[]}]}}}})
   result=g.run(root,cfg,lambda url:json.dumps({'rc':1,'re':[]}),date(2026,11,24),time.monotonic()+120)
   self.assertEqual(result['status'],'partial');self.assertEqual(result['coverage']['bodiesCompleteOnTarget'],0);self.assertEqual(result['coverage']['selectedPostsOnTarget'],1)
+ def test_yesterday_material_precedes_older_backfill_and_existing_readable_posts(self):
+  root,d,cfg=self.fixture();cfg['forumDaily'].update(detailObjectsPerBatch=3,detailsPerVisit=1)
+  rows=[{'id':str(i),'objectId':'fund000001','date':day,'title':'已收录','url':'https://example.com/post','content':body,'coverage':{'body':'complete' if body else 'unknown','comments':'unknown'},'comments':[]} for i,(day,body)in enumerate([('2026-11-22',''),('2026-11-23','已有正文'),('2026-11-23','')],1)]
+  write(root/'prototype/.public-corpus/activity/funds/01.json',{'objects':{'fund000001':{'news':[],'forum':{'records':rows}}}});seen=[]
+  def hydrate(fetch,row,pages):seen.append(row['id']);row.update(content='正文',coverage={'body':'complete','comments':'complete'});return 1
+  with patch.object(g,'hydrate',side_effect=hydrate):g.run(root,cfg,lambda url:json.dumps({'rc':1,'re':[]}),date(2026,11,24),time.monotonic()+120)
+  self.assertEqual(seen,['3'])
  def test_refusal_stops_every_object_and_retains_global_cooldown(self):
   root,d,cfg=self.fixture();calls=[]
   def denied(url):calls.append(url);raise u.SourceRefused('403')

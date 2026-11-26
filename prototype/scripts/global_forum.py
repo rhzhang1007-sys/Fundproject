@@ -151,14 +151,14 @@ def run(root=ROOT,config=None,fetch=None,as_of=None,deadline=None):
             forum=activity(obj)
             rows=[r for r in forum['records'] if oldest<=r['date']<=target and r.get('source')!='新浪股市汇' and pending(r,now)]
             if rows:candidates.append((obj,rows))
-        candidates.sort(key=lambda pair:(state['objects'][pair[0]['id']].get('lastDetailAt',''),pair[0]['id']))
+        candidates.sort(key=lambda pair:(not any(r['date']==target for r in pair[1]),state['objects'][pair[0]['id']].get('lastDetailAt',''),pair[0]['id']))
         news_model_status={'status':'separate-news-job'}
         material_fetch=CurlPublicFetcher(config.get('requestIntervalSeconds',1),timeout=12,deadline=deadline,max_attempts=1) if live_fetch else fetch
         for obj,rows in candidates[:int(settings.get('detailObjectsPerBatch',34595))]:
             if time.monotonic()>deadline-35:break
             oid=obj['id'];forum=activity(obj)
             # Give each object a small turn; failed pages cannot starve all peers.
-            rows.sort(key=lambda r:(r.get('materialCheckedAt',''),-int(bool(r.get('content'))),r['date'],r['id']))
+            rows.sort(key=lambda r:(r['date']!=target,-int(r['date'].replace('-','')),bool(r.get('content')),r.get('materialCheckedAt',''),r['id']))
             for row in rows[:int(settings.get('detailsPerVisit',3))]:
                 if time.monotonic()>deadline-35:break
                 before=(row.get('coverage') or {}).get('body')=='complete'
