@@ -17,7 +17,7 @@
   "maxPostsPerObject": 30,
   "llmClaims": false,
   "minPostsForClaims": 5,
-  "publishEnabled": false,
+  "publishEnabled": true,
   "maxForumPages": 200,
   "pipelineMode": "source-first",
   "catchUpDays": 2,
