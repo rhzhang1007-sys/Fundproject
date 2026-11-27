@@ -24,6 +24,12 @@ class Wake(unittest.TestCase):
  def test_queued_or_active_work_is_not_duplicated(self):
   for status in ['queued','in_progress','waiting','pending','requested']:
    self.assertFalse(decision('news',{},[{'status':status}],self.settings,self.now)['dispatch'])
+ def test_partial_retries_are_spread_over_the_morning_instead_of_exhausted_before_late_nav_arrives(self):
+  marker={'executionDay':'2026-11-27','executed':True,'retryNeeded':True,'attemptsToday':1}
+  self.assertEqual(decision('nav',marker,[],self.settings,self.now.replace(hour=6,minute=30))['reason'],'awaiting-next-retry-window')
+  self.assertTrue(decision('nav',marker,[],self.settings,self.now.replace(hour=7,minute=12))['dispatch'])
+  marker['attemptsToday']=2
+  self.assertFalse(decision('nav',marker,[],self.settings,self.now.replace(hour=8,minute=30))['dispatch'])
  def test_daily_cap_and_retry_backoff(self):
   run={'status':'completed','run_started_at':'2026-11-27T02:00:00Z','updated_at':'2026-11-27T02:30:00Z'}
   self.assertFalse(decision('news',{},[run],self.settings,self.now)['dispatch'])

@@ -26,6 +26,9 @@ def decision(job,marker,runs,settings,now=None):
     if any(r.get('status') in ACTIVE for r in runs):return stop('job-already-active')
     today=[r for r in runs if (t:=stamp(r.get('run_started_at') or r.get('created_at'))) and t.date()==now.date()]
     if len(today)>=int(settings.get('maxAttemptsPerDay',4)):return stop('daily-attempt-cap')
+    attempts=max(len(today),int(marker.get('attemptsToday') or 1) if marker.get('executionDay')==result['day'] and marker.get('executed') is True else 0)
+    hours=settings.get('retryHoursCST',[7,9,11])
+    if attempts and hours and (now.hour,now.minute)<(hours[min(attempts-1,len(hours)-1)],minute+1):return stop('awaiting-next-retry-window')
     latest=max((t for r in today if (t:=stamp(r.get('updated_at') or r.get('run_started_at') or r.get('created_at')))),default=None)
     if latest and now-latest<timedelta(minutes=int(settings.get('retryMinutes',45))):return stop('retry-backoff')
     return {**result,'dispatch':True,'reason':'overdue-source-job','attemptsToday':len(today)}

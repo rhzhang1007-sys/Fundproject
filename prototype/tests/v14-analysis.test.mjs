@@ -10,7 +10,8 @@ test('a failed source inside a saved partial run retains its bounded backup oppo
 test('legacy incomplete markers retry with a cooldown and daily cap, without claiming source completeness',()=>{
  const marker={job:'nav',executionDay:'2026-11-27',executed:true,adapter:'eastmoney-daily-nav-v2',retryNeeded:false,sourceCoverageStatus:'incomplete',at:'2026-11-27T05:10:00+08:00',attemptsToday:1};
  assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T05:20:00+08:00')),false);
- assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T06:00:00+08:00')),true);
+ assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T06:00:00+08:00')),false);
+ assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T07:12:00+08:00')),true);
  assert.equal(shouldRun({...marker,attemptsToday:4},'nav','2026-11-27',{},new Date('2026-11-27T09:00:00+08:00')),false);
  assert.equal(shouldRun({...marker,attemptsToday:4},'nav','2026-11-28'),true);
  assert.equal(shouldRun({...marker,sourceCoverageStatus:'source-bounded'},'nav','2026-11-27'),false);

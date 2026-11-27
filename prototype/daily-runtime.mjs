@@ -7,6 +7,8 @@ export function shouldRun(marker,job,day=localDay(),settings={},now=new Date()){
  if(!marker||marker.job!==job||marker.executionDay!==day||marker.executed!==true)return true;
  if(!needsRetry(marker)&&!(job==='nav'&&marker.adapter!=='eastmoney-daily-nav-v2'))return false;
  if((marker.attemptsToday||1)>=Number(settings.maxAttemptsPerDay||4))return false;
+ const hours=settings.retryHoursCST||[7,9,11],hour=hours[Math.min((marker.attemptsToday||1)-1,hours.length-1)];
+ if(Number.isFinite(hour)&&now<new Date(day+'T'+String(hour).padStart(2,'0')+':'+({nav:'11',index:'21',news:'31'}[job])+':00+08:00'))return false;
  const at=Date.parse(marker.at);if(Number.isFinite(at)&&localDay(new Date(at))===day&&now-new Date(at)<Number(settings.retryMinutes||45)*60000)return false;
  return true;
 }

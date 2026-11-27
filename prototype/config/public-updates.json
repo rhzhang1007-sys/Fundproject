@@ -80,6 +80,11 @@
   "dailyDispatch": {
     "enabled": true,
     "maxAttemptsPerDay": 4,
-    "retryMinutes": 45
+    "retryMinutes": 45,
+    "retryHoursCST": [
+      7,
+      9,
+      11
+    ]
   }
 }
