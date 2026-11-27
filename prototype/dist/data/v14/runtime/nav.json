@@ -1,1 +1,1 @@
-{"schemaVersion":2,"job":"nav","executionDay":"2026-11-27","executed":true,"attemptsToday":1,"adapter":"eastmoney-daily-nav-v2","retryNeeded":true,"runId":"45933773882","at":"2026-11-27T03:26:22.669Z","sourceCoverageStatus":"incomplete","sourceCoverageComplete":false}
+{"schemaVersion":2,"job":"nav","executionDay":"2026-11-27","executed":true,"attemptsToday":2,"adapter":"eastmoney-daily-nav-v2","retryNeeded":true,"runId":"45939232932","at":"2026-11-27T04:23:12.177Z","sourceCoverageStatus":"incomplete","sourceCoverageComplete":false}
