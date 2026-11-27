@@ -24,7 +24,7 @@ export function comparisonGroup(catalogue,code,ui={},similar=[]){
  const rows=members.map(x=>({...x,...(x.windows?.[period]||{}),ready:Boolean(x.windows?.[period])})),current=rows.find(x=>x.code===code),statistics={};
  for(const [key,direction] of [['totalReturn','desc'],['annualVol','asc'],['maxDrawdown','asc'],['ulcer','asc'],['win63','desc'],['fee','asc']]){
   const others=rows.filter(x=>x.code!==code&&Number.isFinite(x[key])).map(x=>x[key]),all=rows.filter(x=>Number.isFinite(x[key])),value=current?.[key];
-  statistics[key]={value:Number.isFinite(value)?value:null,median:percentile(others,.5),p25:percentile(others,.25),p75:percentile(others,.75),others:others.length,n:all.length,rank:Number.isFinite(value)?1+all.filter(x=>direction==='desc'?x[key]>value+1e-12:x[key]<value-1e-12).length:null};
+  const median=percentile(others,.5);statistics[key]={value:Number.isFinite(value)?value:null,difference:Number.isFinite(value)&&Number.isFinite(median)?value-median:null,median,p25:percentile(others,.25),p75:percentile(others,.75),others:others.length,n:all.length,rank:Number.isFinite(value)?1+all.filter(x=>direction==='desc'?x[key]>value+1e-12:x[key]<value-1e-12).length:null};
  }
  const sort=['totalReturn','annualVol','maxDrawdown','ulcer','fee'].includes(ui.peerSort)?ui.peerSort:'totalReturn',direction=sort==='totalReturn'?-1:1,q=String(ui.peerSearch||'').trim().toLowerCase();
  const filtered=rows.filter(x=>x.code!==code&&(!q||(x.name+x.code).toLowerCase().includes(q))).sort((a,b)=>{const af=Number.isFinite(a[sort]),bf=Number.isFinite(b[sort]);return Number(bf)-Number(af)||(af&&bf?(a[sort]-b[sort])*direction:0)||a.code.localeCompare(b.code);});
