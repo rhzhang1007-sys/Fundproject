@@ -42,6 +42,7 @@ jobs:
         env:
           PUBLIC_API_ORIGIN: ${{ vars.PUBLIC_API_ORIGIN }}
         run: |
+          node prototype/build-peer-comparison.mjs
           node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
           python - <<'PY'
           import sys,subprocess,os

@@ -1,5 +1,6 @@
 // Read existing WB/public snapshots and aggregate display data. No HTTP or collection.
 import {readFile,writeFile,mkdir,rename,stat,readdir} from 'node:fs/promises';
+import {buildPeerComparison} from './build-peer-comparison.mjs';
 import {buildResearch} from './build-research-view.mjs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 import {V7_METHOD,feeParts,peerKey,names,checkedNav,navMetrics,concentrationTrend,quantile,rSquared,scoreFactors} from './dist/v14-compute.mjs';
@@ -86,4 +87,4 @@ export async function buildView({root=ROOT,source=null,asOf=null,navSource=null}
  await write(path.join(stage,'manifest.json'),manifest);await mkdir(out,{recursive:true});for(const folder of ['funds','nav','holdings']){await mkdir(path.join(out,folder),{recursive:true});for(const file of await readdir(path.join(stage,folder)))await write(path.join(out,folder,file),await json(path.join(stage,folder,file)));}await write(path.join(out,'manifest.json'),manifest);
  return {version,funds:records.size,withAdjustedHistory:Object.keys(nav).length,usableRisk:usable,seconds:(Date.now()-started)/1000,collectionPerformed:false};
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){const a=process.argv.slice(2),arg=k=>a.includes(k)?a[a.indexOf(k)+1]:null;const display=await buildView({source:arg('--source'),asOf:arg('--as-of'),navSource:arg('--nav')});console.log(JSON.stringify({...display,research:await buildResearch({root:ROOT})}));}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){const a=process.argv.slice(2),arg=k=>a.includes(k)?a[a.indexOf(k)+1]:null;const display=await buildView({source:arg('--source'),asOf:arg('--as-of'),navSource:arg('--nav')});console.log(JSON.stringify({...display,research:await buildResearch({root:ROOT}),comparisons:await buildPeerComparison({root:ROOT})}));}

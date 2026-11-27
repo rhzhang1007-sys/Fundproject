@@ -6,4 +6,4 @@ export const icon=(name,cls='')=>`<svg class="v15-icon ${cls}" viewBox="0 0 24 2
 export const metric=(label,value,sub='')=>`<div class="v15-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub?`<small>${esc(sub)}</small>`:''}</div>`;
 export const formula=(text,title='计算说明与公式')=>`<details class="v15-formula"><summary>${esc(title)}${icon('down')}</summary><p>${esc(text)}</p></details>`;
 export const empty=(text,action='')=>`<div class="v15-empty"><p>${esc(text)}</p>${action}</div>`;
-export const strongText=text=>esc(text).replace(/\*\*([^*\n]{1,120})\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+export const strongText=text=>esc(text).replace(/\*\*([^*\n]{1,120})\*\*/g,'<strong>$1</strong>').replace(/==([^=\n]{1,100})==/g,'<mark class="v24-ai-highlight">$1</mark>').replace(/\n/g,'<br>');

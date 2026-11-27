@@ -58,6 +58,7 @@ def prepare(root, destination, *, profile='full', revision='', api_origin=None):
     if (source/'data/v14').exists():tree(source/'data/v14',destination/'data/v14')
     if (source/'data/v16').exists():tree(source/'data/v16',destination/'data/v16')
     if (source/'data/v17').exists():tree(source/'data/v17',destination/'data/v17')
+    if (source/'data/v24').exists():tree(source/'data/v24',destination/'data/v24')
     catalog=json.loads((source/'data/catalog.json').read_text());catalog.pop('defaultWeights',None);catalog['sources']=[s for s in catalog.get('sources',[]) if s.get('visibility')!='internal']
     overnight=source/'data/v11'
     if overnight.exists():tree(overnight,destination/'data/v11')

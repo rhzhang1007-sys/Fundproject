@@ -1,3 +1,4 @@
+import {peerGroupView} from './v24-compare-view.mjs';
 import{ANALYSIS_MODULES,moduleById,researchAnalysis}from'./v16-analysis-model.mjs';
 import{overlapView}from'./v15-analysis.mjs';import{feeParts}from'./v14-compute.mjs';
 import{esc as h,icon,metric,formula,empty,percent as p,money}from'./v15-ui.mjs';
@@ -51,7 +52,7 @@ function experience(a,ui){
  formula('持有h个交易日的收益=Vₜ₊ₕ/Vₜ−1；盈利窗口占比=正收益窗口数/完整窗口数，0收益不计为盈利。10%、50%、90%分位采用线性插值。窗口相互重叠，观察频率不是未来盈利概率；月度表取该月首个可用交易日为起点，未走满期限的格子留空。');
 }
 function peerChoice(a){
- const f=a.fund,rows=f.study.peers||[];
+ const f=a.fund,rows=[...(f.study.peers||[])];if(a.peer&&!rows.some(x=>x.code===a.peer.code))rows.push({code:a.peer.code,name:a.peer.name,match:'同类对照',overlap:a.pair?.stock?.overlap,correlation:a.pair?.correlation,fee:feeParts(a.peer.profile)});
  return '<div class="v16-pair-pickers">'+picker(a)+'<label class="v15-fund-picker"><span>对照基金</span><select id="v16-peer-select" aria-label="对照基金">'+rows.map(x=>'<option value="'+x.code+'" '+(x.code===a.selectedPeer?'selected':'')+'>'+h(x.name)+' · '+x.code+'</option>').join('')+'</select></label></div><details class="v15-more v16-peer-list"><summary>查看'+rows.length+'只对照基金与匹配依据</summary>'+table(['对照基金','关联依据','已披露重叠','相关性','管理＋托管年费率',''],rows.map(x=>tr([h(x.name)+'<small>'+x.code+'</small>',h(x.match),p(x.overlap),x.correlation?.toFixed(3)||'—',p(x.fee?.two),btn('analysis-peer',x.code===a.selectedPeer?'已选对照':'对照这只',x.code,x.code===a.selectedPeer)])))+'</details>';
 }
 function captureChart(a){
@@ -64,8 +65,13 @@ function pairTable(a){
  const c=a.pair;if(!c?.ready)return empty(c?.reason||'选择一只基金作对照');
  return '<h3 class="v16-subtitle">'+h(a.fund.name)+' / '+h(a.peer.name)+'</h3><p class="v15-scope-line">共同区间 '+c.from+' 至 '+c.to+' · '+c.n+'个日收益</p>'+table(['共同区间的对照项','本基金','对照基金'],[['区间收益',c.a.totalReturn,c.b.totalReturn],['年化波动',c.a.annualVol,c.b.annualVol],['最大回撤',c.a.maxDrawdown,c.b.maxDrawdown],['回撤压力指数',c.a.ulcer,c.b.ulcer],['低于前高的时间',c.a.underwaterShare,c.b.underwaterShare]].map(x=>tr([h(x[0]),p(x[1]),p(x[2])])).concat([tr(['最长未创新高',c.a.longestUnderwater+'交易日',c.b.longestUnderwater+'交易日'])]));
 }
-function peers(a){
- return peerChoice(a)+(a.pair?.ready?captureChart(a)+pairTable(a)+sentence('相似，并不表示可以直接互换','结合<strong>股票重叠、涨跌参与率、回撤压力和费用</strong>看差异。低上涨参与率如果同时伴随较浅的下跌，往往是在承担不同的风险；若只看涨得慢，会遗漏这一半信息。'):'')+
+function peers(a,ui){
+ const mode=ui.peerView||'group',switcher='<div class="v15-segments v24-peer-mode" aria-label="基金对比方式">'+btn('peer-view','整体对比','group',mode==='group')+btn('peer-view','两只详比','pair',mode==='pair')+'</div>';
+ if(mode==='group')return switcher+peerGroupView(a,ui);
+ return switcher+peerPair(a);
+}
+function peerPair(a){
+ return peerChoice(a)+(a.pair?.ready?captureChart(a)+pairTable(a)+sentence('结合上涨和下跌两方面理解差异','对照<strong>股票重叠、涨跌参与率、回撤压力和费用</strong>。上涨参与较少、下跌幅度也较小的基金，体现了更平缓的历史路径；继续结合相同持有期限，查看这种特点怎样影响持有过程。'):'')+
  formula('对照优先同指数、同产品形式；其次为同期已披露股票重叠≥10%、近252个共同日收益相关系数≥0.65的同类型基金。排除同一管理人下全称相同的份额重复。门槛是用于建立研究样本的固定筛选值，不是经过寻优的行业分类。上涨/下跌参与率取对照基金上涨/下跌月份中两者月收益几何均值之比，至少各6个月，未结束月份不纳入。对照均在同一可用区间重算，净值收益已扣持续费用。');
 }
 function costs(a){
@@ -87,6 +93,6 @@ export function renderAnalysisV16(model,bounds,data,ui={}){
  const module=moduleById(ui.analysisModule),head='<div class="v15-pagehead"><div><h1>持仓分析</h1><span>我的持仓 · '+model.funds.length+'只基金 · '+money(model.total)+'</span></div><div class="v16-head-actions"><button type="button" class="v15-primary" data-act="toggle-analysis-ai">'+icon('spark')+'AI解读</button></div></div>',dir=directory(module[0]);
  if(!model.funds.length)return head+dir+empty('添加基金和金额，开始理解组合。',btn('edit-holdings','添加持仓'));
  if(!data?.manifest)return head+dir+empty(ui.analysisError||'正在读取净值与持仓资料…',ui.analysisError?btn('v7-reload','重新读取'):'');
- const a=researchAnalysis(model,data,ui),views={overlap:()=>overlapView(a,ui),diversification:()=>diversification(a),managers:()=>roles(a),risk:()=>risks(a),drawdown:()=>drawdowns(a,ui),experience:()=>experience(a,ui),peers:()=>peers(a),fees:()=>costs(a),changes:()=>changes(a)};
+ const a=researchAnalysis(model,data,ui),views={overlap:()=>overlapView(a,ui),diversification:()=>diversification(a),managers:()=>roles(a),risk:()=>risks(a),drawdown:()=>drawdowns(a,ui),experience:()=>experience(a,ui),peers:()=>peers(a,ui),fees:()=>costs(a),changes:()=>changes(a)};
  return head+dir+ai(ui,module)+'<section class="v15-detail" id="analysis-detail" aria-label="'+h(module[1])+'"><header class="v15-workspace-head"><div>'+icon(module[2])+'<h2>'+h(module[1])+'</h2></div><button class="v15-text-link" type="button" data-act="analysis-directory">分析目录 '+icon('arrow')+'</button></header>'+views[module[0]]()+dataDetails(a,data)+'</section>';
 }

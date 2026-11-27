@@ -21,6 +21,7 @@ def build(root=ROOT):
  files+=['prototype/scripts/forum_schedule.py','prototype/scripts/forum_continue.py','prototype/tests/test_forum_schedule.py','prototype/tests/forum-service.test.mjs','prototype/tests/ai-result-policy.test.mjs','docs/五点采集与独立补读-v20.md']
  files+=['prototype/scripts/daily_dispatch.py','prototype/tests/test_daily_dispatch.py','docs/日更触发与补跑-v21.md']
  files+=['Dockerfile','.dockerignore','prototype/tests/service-api.test.mjs','docs/Pages与后台部署-v22.md']
+ files+=['prototype/build-peer-comparison.mjs','prototype/tests/v24-comparison.test.mjs','prototype/tests/v24-ai-presentation.test.mjs','docs/AI表达与同类整体对比-v24.md']
  files+=['render.yaml','deploy/supabase-state.sql','prototype/cloud-state.mjs','prototype/public-data-cache.mjs','prototype/tests/cloud-state.test.mjs','prototype/tests/data-source.test.mjs','prototype/tests/test_pages_package.py','docs/免费部署操作步骤-v23.md']
  for name in files:
   target=stage/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,target)

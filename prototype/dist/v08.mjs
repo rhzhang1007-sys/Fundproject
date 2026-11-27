@@ -18,11 +18,12 @@ import {discussionIds,discussionRows,readableDiscussionDay} from './portfolio-di
 import {renderGuide} from './v15-guide.mjs';
 import {icon,strongText} from './v15-ui.mjs';
 import {createAIJobs} from './v15-ai-jobs.mjs';
-import {aiResultBody,recentAIResult} from './ai-result-view.mjs';
+import {aiResultBody,recentAIResult,recentAIKey} from './ai-result-view.mjs';
 import {fitTextMaterials} from './material-budget.mjs';
 import {analyzeEvents,eventBody} from './v15-news.mjs';
 import {createV7Store} from './v14-store.mjs';
-const objectStore=createObjectStore(),v7Store=createV7Store();
+import {createComparisonStore} from './v24-comparison.mjs';
+const objectStore=createObjectStore(),v7Store=createV7Store(),comparisonStore=createComparisonStore();
 const objectCards=new Map();
 const objectResources=new Map(),objectJobs=new Map();
 const objectActivities=new Map();
@@ -106,7 +107,9 @@ async function ensureAnalysisData(force=false){
   D.v7=data;if(S.view==='analysis')render();
  }catch(e){if(request===analysisRequest){D.v7Error=e.message;if(S.view==='analysis')render();}}
 }
-function viewAnalysis(){const m=analysisModel();if(m.funds.length)ensureAnalysisData();return renderAnalysisV16(m,S.bounds,D.v7,{...S,analysisError:D.v7Error,analysisQuestion:S.aiQuestions.analysis||''});}
+let comparisonLoading=false,comparisonSearchTimer;
+async function ensureComparisonData(){if(D.comparisons||comparisonLoading||D.comparisonError)return;comparisonLoading=true;try{D.comparisons=await comparisonStore.load();}catch(e){D.comparisonError=e.message;}finally{comparisonLoading=false;if(S.view==='analysis'&&S.analysisModule==='peers')render();}}
+function viewAnalysis(){const m=analysisModel();if(S.analysisModule==='peers')ensureComparisonData();if(m.funds.length)ensureAnalysisData();return renderAnalysisV16(m,S.bounds,D.v7,{...S,comparisonCatalogue:D.comparisons,comparisonError:D.comparisonError,analysisError:D.v7Error,analysisQuestion:S.aiQuestions.analysis||''});}
 function objectList(mode){const m=model(),held=mode==='fund'?m.funds:m.companies;const extra=S.view==='discussion'?D.discussionOptions[mode]:D.timelineOptions[mode];return [...new Map([...held,...extra].map(x=>[x.id,x])).values()];}
 function objectModel(id){return selectionModel(model(),D.funds,id);}
 function timelineModel(){return objectModel(S.timelineId);}
@@ -138,12 +141,13 @@ function evidenceMaterials(objectId=S.sourceId,question=''){
  const recent=objectId?eventSelection(D.events,objectModel(objectId),objectId.startsWith('fund')?'fund':'company',objectId,today()).slice(0,6):[];
  return [...sourceList,...recent.map(e=>({id:e.id,text:[e.date,e.title,e.summary,e.contentCoverage==='title-only'?'仅标题，正文未读取':''].filter(Boolean).join(' '),url:safeUrl(e.url),date:e.date,locator:''}))];
 }
+const storedDismissedAI=read('zhijian-dismissed-ai-v24',{}),dismissedAI=storedDismissedAI&&typeof storedDismissedAI==='object'&&!Array.isArray(storedDismissedAI)?storedDismissedAI:{};
 function currentRecentAI(scope=S.view){const job=aiJobs?.latestComplete(scope);if(job)return {value:job.value,entry:job.saved?library.aiEntry(job.value.libraryEntryId):null};const entry=library?.latestAI(scope);return entry?{value:{...entry.aiResult,saved:true},entry}:null;}
 function paintAIStatus(){
  if(!aiJobs)return;
  for(const el of document.querySelectorAll('[data-ai-scope]')){const scope=el.dataset.aiScope,job=aiJobs.latest(scope);el.classList.toggle('is-running',Boolean(job&&['running','queued'].includes(job.status)));el.innerHTML=job?h(job.message)+(job.status==='complete'?btn('show-ai-job','查看结果',job.id,'v15-text-link'):''):'';
   let host=el.parentElement.querySelector('[data-ai-recent]');if(!host){host=document.createElement('div');host.dataset.aiRecent=scope;el.insertAdjacentElement('afterend',host);}
-  const latest=currentRecentAI(scope),key=latest?JSON.stringify([latest.value.libraryEntryId,latest.value.createdAt,latest.entry?.updatedAt]):'';
+  const found=currentRecentAI(scope),latest=found&&dismissedAI[scope]!==recentAIKey(found.value)?found:null,key=latest?JSON.stringify([latest.value.libraryEntryId,latest.value.createdAt,latest.entry?.updatedAt]):'';
   if(host.dataset.resultKey!==key){host.innerHTML=latest?recentAIResult(latest.value,latest.entry):'';host.dataset.resultKey=key;
    if(latest?.entry){const area=host.querySelector('textarea');if(area&&S.aiNoteDrafts?.[latest.entry.id]!==undefined)area.value=S.aiNoteDrafts[latest.entry.id];}}
  }
@@ -155,16 +159,20 @@ function notifyAIComplete(job){
 function showAIResult(){if(!S.ai)return;const entry=library.aiEntry(S.ai.libraryEntryId);dialog(S.ai.result.title,aiResultBody(S.ai)+`${entry?`<form class="v18-ai-note" data-ai-note-form="${h(entry.id)}"><label class="v7-field"><span>我的笔记</span><textarea name="note" rows="3" maxlength="20000">${h(S.aiNoteDrafts?.[entry.id]??entry.note)}</textarea></label><button class="v7-btn primary">保存笔记</button></form>`:''}<div class="v7-actions"><span class="v15-progress-note">${h(S.ai.saved===false?'请复制保存结果':'已自动保存到我的资料库 · AI解读')}</span>${btn('organize-ai','收藏与分类')}${btn('ai-library','在资料库查看')}${btn('copy-ai','复制结果')}</div>`);}
 function organizeAI(value){const entry=library.aiEntry(value.libraryEntryId);return library.collect(entry||{title:value.result.title,excerpt:[value.result.overview?.text,...value.result.points.map(p=>p.text)].filter(Boolean).join('\n\n'),aiResult:value,referenceId:'ai:'+value.libraryEntryId});}
 function aiTitle(task,scope=S.view){const names={news_summary:'事件摘要',news_impact:'事件与持仓关联',news_differences:'事件要点与分歧',news_ask:'事件问答',analysis_module:moduleById(S.analysisModule)[1]+'解读',analysis_overview:'组合整体解读',analysis_cost:'相似基金比较解读',analysis_history:'持有体验解读',analysis_ask:'持仓分析问答'};const selected=scope==='analysis'?((task==='analysis_cost'||task!=='analysis_overview'&&(['peers','fees','changes'].includes(S.analysisModule)||['experience','drawdown'].includes(S.analysisModule)&&S.historyScope==='fund'))?(analysisModel().funds.find(f=>f.id===S.analysisFund)||analysisModel().funds[0]):null):objectCards.get(scope==='news'?S.timelineId:scope==='sources'?S.sourceId:S.discussionId);return (names[task]||({sources:'资料解读',discussion:'帖子与评论解读',library:'收藏资料解读'}[scope])||'AI解读')+' · '+(selected?.name||(scope==='analysis'?'当前组合':scope==='library'?'所选收藏':'我的持仓'));}
-function startAI({task,materials=[],question='',scope=S.view,work}){if(S.cfg.mode==='custom'&&(!S.cfg.url||!S.cfg.key||!S.cfg.model))return toast('请在设置中填写模型接口');const cfg=structuredClone(S.cfg),title=aiTitle(task,scope),key=JSON.stringify([scope,task,materials.map(x=>[x.id,x.text||'']),question]);if($('#v7-dialog').open)close();const job=aiJobs.start({scope,title,key,work:async progress=>{const value=work?await work(cfg,progress):{result:await requestAI(cfg,task,materials,question),materials};const generated=value.result.title;value.result.title=value.result.quality?.kind==='source-excerpts'?title+' · 原文要点':['summary','qa','verify'].includes(task)&&generated&&!['摘要','问题','模型结果'].includes(generated)?(title+' · '+generated).slice(0,180):title;value.task=task;return value;}});paintAIStatus();return job.promise;}
+function startAI({task,materials=[],question='',scope=S.view,work}){if(S.cfg.mode==='custom'&&(!S.cfg.url||!S.cfg.key||!S.cfg.model))return toast('请在设置中填写模型接口');const cfg=structuredClone(S.cfg),title=aiTitle(task,scope),key=JSON.stringify([scope,task,materials.map(x=>[x.id,x.text||'']),question]);if($('#v7-dialog').open)close();const job=aiJobs.start({scope,title,key,work:async progress=>{const value=work?await work(cfg,progress):{result:await requestAI(cfg,task,materials,question),materials};const generated=value.result.title;value.result.title=value.result.quality?.kind==='source-excerpts'?title+' · 原文要点':generated&&!['摘要','问题','模型结果','AI解读','解读'].includes(generated)&&!title.includes(generated)?(title+' · '+generated).slice(0,180):title;value.task=task;return value;}});paintAIStatus();return job.promise;}
 function runAI(task,materials,question=''){if(task.startsWith('analysis_'))materials=selectResearchMaterials(materials,task,S);if(!materials.length&&task!=='verify')return toast('请选择资料');return startAI({task,materials,question});}
-function currentAnalysisMaterials(){return researchMaterials(analysisModel(),D.v7,S);}
+function currentAnalysisMaterials(){return researchMaterials(analysisModel(),D.v7,{...S,comparisonCatalogue:D.comparisons});}
 async function readEvent(id){const e=D.events.find(x=>x.id===id);if(!e)return;toast('正在读取正文…');try{const x=await eventBody(e);dialog(e.title,`<p class="v8-muted">${h(e.date)} · ${h(e.source)}</p><div class="v15-article-body">${h(x.body)}</div><div class="v7-actions">${ext(e.url,'原文')}${btn('collect-event','收藏',id)}</div>`);}catch(err){toast(err.message);}}
 
 async function onClick(e){if(e.target.closest('#v7-nav a[href="#holdings"],.v7-brand')){S.focus='portfolio';S.detail='portfolio';if(S.view==='holdings')render();}
  const el=e.target.closest('[data-act]');if(!el)return;const act=el.dataset.act,id=el.dataset.id;try{
  if(act==='guide-section'){e.preventDefault();return document.getElementById('guide-'+id)?.scrollIntoView({behavior:'smooth'});}
  if(act==='guide-analysis'){S.analysisModule=id;return location.hash='analysis';}
- if(act==='analysis-peer'){S.analysisPeer=id;return ensureAnalysisData();}
+ if(act==='analysis-peer'){S.peerView='pair';S.analysisPeer=id;return ensureAnalysisData();}
+ if(act==='peer-view'){S.peerView=id;return render();}
+ if(act==='peer-scope'){S.peerScope=id;S.peerPage=0;return render();}
+ if(act==='peer-page'){S.peerPage=Number(id);return render();}
+ if(act==='reload-comparison'){comparisonStore.reset();D.comparisons=null;D.comparisonError=null;return render();}
  if(act==='analysis-module'){S.analysisModule=id;render();document.querySelector('#analysis-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
  if(act==='analysis-directory')return document.querySelector('.v15-directory')?.scrollIntoView({behavior:'smooth',block:'start'});
  if(act==='toggle-analysis-ai'){S.analysisAIOpen=!S.analysisAIOpen;return render();}
@@ -174,6 +182,7 @@ async function onClick(e){if(e.target.closest('#v7-nav a[href="#holdings"],.v7-b
  if(act==='dismiss-ai-notice'){document.querySelector(`[data-ai-notice="${CSS.escape(id)}"]`)?.remove();return;}
  if(act==='ai-library'){close();library.showAIEntries();return;}
  if(['open-recent-ai','organize-recent-ai','copy-recent-ai'].includes(act)){const recent=currentRecentAI();if(!recent)return;S.ai=recent.value;if(act==='open-recent-ai')return showAIResult();if(act==='organize-recent-ai')return organizeAI(S.ai);return navigator.clipboard.writeText([S.ai.result.overview?.text,...S.ai.result.points.map(p=>p.text)].filter(Boolean).join('\n\n')).then(()=>toast('已复制'));}
+ if(act==='dismiss-recent-ai'){const recent=currentRecentAI();if(recent){dismissedAI[S.view]=recentAIKey(recent.value);put('zhijian-dismissed-ai-v24',dismissedAI);paintAIStatus();}return;}
  if(act==='organize-ai')return organizeAI(S.ai);
  if(act==='show-ai-job'){const job=aiJobs.get(id);if(job?.value){S.ai={...job.value,saved:job.saved};return showAIResult();}return;}
  if(act==='read-event')return readEvent(id);
@@ -231,11 +240,11 @@ async function onSubmit(e){if(e.target.matches('[data-ai-note-form]')){e.prevent
  if(id==='verify-form')return runAI('verify',evidenceMaterials(S.discussionId,data.claim),String(data.claim).replace(/@\S+/g,'').trim());
  if(id==='qa-form'){await loadObjectStreams(S.sourceId);return runAI('qa',evidenceMaterials(S.sourceId,data.question),data.question);}
  }catch(err){toast(err.message);}}
-async function onChange(e){const el=e.target;if(el.id==='overlap-fund-a'||el.id==='overlap-fund-b'){S[el.id==='overlap-fund-a'?'overlapA':'overlapB']=el.value;S.overlapMode='pair';return render();}if(el.id==='v16-peer-select'){S.analysisPeer=el.value;return ensureAnalysisData();}if(el.id==='v7-analysis-fund'){S.analysisFund=el.value;S.analysisPeer='';return render();}if(el.dataset.sourcePick){el.checked?S.selected.add(el.dataset.sourcePick):S.selected.delete(el.dataset.sourcePick);return;}if(el.id==='forum-date'){S.forumDay=el.value;S.forumDateTouched=true;S.forumSelected.clear();return render();}if(el.dataset.forumPick){el.checked?S.forumSelected.add(el.dataset.forumPick):S.forumSelected.delete(el.dataset.forumPick);return;}if(el.dataset.reportFund){const f=D.funds.find(f=>f.code===el.dataset.reportFund);Object.assign(f,await objectStore.relations(f.code,{asOf:el.value}));S.focus=f.id;S.detail=f.id;return render();}if(el.name==='mode'&&el.closest('#settings-form')){el.form.querySelector('details').open=el.value==='custom';return;}if(el.dataset.eventPick){el.checked?S.selected.add(el.dataset.eventPick):S.selected.delete(el.dataset.eventPick);const b=document.querySelector('[data-act="ai-summary"]');if(b)b.disabled=!S.selected.size;return;}
+async function onChange(e){const el=e.target;if(el.id==='overlap-fund-a'||el.id==='overlap-fund-b'){S[el.id==='overlap-fund-a'?'overlapA':'overlapB']=el.value;S.overlapMode='pair';return render();}if(['v24-peer-horizon','v24-peer-family','v24-peer-sort'].includes(el.id)){S[{'v24-peer-horizon':'peerHorizon','v24-peer-family':'peerFamily','v24-peer-sort':'peerSort'}[el.id]]=el.value;S.peerPage=0;return render();}if(el.id==='v16-peer-select'){S.analysisPeer=el.value;return ensureAnalysisData();}if(el.id==='v7-analysis-fund'){S.analysisFund=el.value;S.analysisPeer='';S.peerPage=0;S.peerSearch='';return render();}if(el.dataset.sourcePick){el.checked?S.selected.add(el.dataset.sourcePick):S.selected.delete(el.dataset.sourcePick);return;}if(el.id==='forum-date'){S.forumDay=el.value;S.forumDateTouched=true;S.forumSelected.clear();return render();}if(el.dataset.forumPick){el.checked?S.forumSelected.add(el.dataset.forumPick):S.forumSelected.delete(el.dataset.forumPick);return;}if(el.dataset.reportFund){const f=D.funds.find(f=>f.code===el.dataset.reportFund);Object.assign(f,await objectStore.relations(f.code,{asOf:el.value}));S.focus=f.id;S.detail=f.id;return render();}if(el.name==='mode'&&el.closest('#settings-form')){el.form.querySelector('details').open=el.value==='custom';return;}if(el.dataset.eventPick){el.checked?S.selected.add(el.dataset.eventPick):S.selected.delete(el.dataset.eventPick);const b=document.querySelector('[data-act="ai-summary"]');if(b)b.disabled=!S.selected.size;return;}
  if(el.matches('[data-timeline-object]'))return selectTimeline(el.value);if(el.matches('[data-discussion-object]')){const id=el.value;S.discussionId=id;S.forumSelected.clear();S.activityLoading=id;render();if(id)await loadObjectStreams(id);if(S.discussionId===id){S.activityLoading='';if(S.view==='discussion')render();}return;}
  if(el.id==='source-object')return selectSource(el.value);
  if(el.id==='account-file'&&el.files[0])try{const data=JSON.parse(await el.files[0].text());if(data.format!=='zhijian-holdings')throw Error('持仓文件格式无效');saveAccount(data.items);}catch(err){toast(err.message);}}
-function onInput(e){const el=e.target;if(el.name==='note'&&el.closest('[data-ai-note-form]')){S.aiNoteDrafts??={};S.aiNoteDrafts[el.closest('form').dataset.aiNoteForm]=el.value;}if(el.name==='question'&&el.closest('#ai-workbench, #v7-ai-form, #v15-analysis-ai-form'))S.aiQuestions[S.view]=el.value;if(el.id==='holding-search')search(el.value,$('#holding-results')).catch(err=>toast(err.message));if(el.id==='v7-q')search(el.value,$('#v7-results')).catch(err=>toast(err.message));
+function onInput(e){const el=e.target;if(el.id==='v24-peer-search'){S.peerSearch=el.value;S.peerPage=0;const pos=el.selectionStart;clearTimeout(comparisonSearchTimer);comparisonSearchTimer=setTimeout(()=>{if(S.view==='analysis'&&S.analysisModule==='peers'){render();const input=document.getElementById('v24-peer-search');input?.focus({preventScroll:true});input?.setSelectionRange(pos,pos);}},220);return;}if(el.name==='note'&&el.closest('[data-ai-note-form]')){S.aiNoteDrafts??={};S.aiNoteDrafts[el.closest('form').dataset.aiNoteForm]=el.value;}if(el.name==='question'&&el.closest('#ai-workbench, #v7-ai-form, #v15-analysis-ai-form'))S.aiQuestions[S.view]=el.value;if(el.id==='holding-search')search(el.value,$('#holding-results')).catch(err=>toast(err.message));if(el.id==='v7-q')search(el.value,$('#v7-results')).catch(err=>toast(err.message));
  if(el.dataset.amountIndex!==undefined){syncEditor();$('#editor-total').textContent=cash(editingRows.reduce((s,r)=>s+(Number(r.amount)||0),0));}
  if(el.matches('[data-timeline-search]')){S.timelineSearch=el.value;searchTimeline(el).catch(err=>toast(err.message));}
  if(el.matches('[data-discussion-search]')){S.discussionSearch=el.value;searchObjects(el,'discussion',S.discussionId.startsWith('stock')?'company':'fund').catch(err=>toast(err.message));}

@@ -61,6 +61,8 @@ jobs:
           if(rebuild)console.log(JSON.stringify(await buildResearch()));
           await appendFile(process.env.GITHUB_OUTPUT,'rebuilt='+rebuild+'\n');
           JS
+      - name: Refresh all-type comparison from accepted NAVs
+        run: node prototype/build-peer-comparison.mjs
       - name: Validate matching research data before committing
         run: node --test prototype/tests/v16-research.test.mjs
       - name: Commit validated daily observations and factors
@@ -69,7 +71,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add prototype/dist/data/v12/nav prototype/dist/data/v12/factors prototype/dist/data/v12/factor-status.json prototype/dist/data/v12/nav-sync-status.json prototype/dist/data/v12/market-sync-status.json prototype/dist/data/v11/observations prototype/dist/data/v11/market.json
-          git add prototype/dist/data/v14 prototype/dist/data/v16
+          git add prototype/dist/data/v14 prototype/dist/data/v16 prototype/dist/data/v24
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update daily NAV observations and eligible factors'
           git -c rebase.autoStash=true pull --rebase

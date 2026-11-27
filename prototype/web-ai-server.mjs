@@ -10,7 +10,7 @@ import {modelEndpoint,createModelTransport} from './model-transport.mjs';
 import {createCloudState} from './cloud-state.mjs';
 import {createPublicMirror} from './public-data-cache.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
-export const PROMPT_VERSION='usable-results-v20-2026-11-26';
+export const PROMPT_VERSION='clear-insights-v24-2026-11-27';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
 export async function readServerConfig(env=process.env){
