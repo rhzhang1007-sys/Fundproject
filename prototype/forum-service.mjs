@@ -19,7 +19,7 @@ export function createForumService(here,{runWorker,stateStore,mirror}={}){
   const k=key(id,date),previous=jobs.get(k);if(['running','queued'].includes(previous?.status)){previous.allScope ||= !postIds.length;postIds.forEach(x=>previous.postIds.add(x));previous.maxVisits=Math.max(previous.maxVisits,allMissing?6:2);return get(id,date);}
   if([...jobs.values()].filter(j=>['running','queued'].includes(j.status)).length>=8)throw Error('读取队列繁忙，请稍后再试');
   const initial=await snapshot(id,date);
-  const local=path.join(here,'.private/forum',id,date+'.json');await mkdir(path.dirname(local),{recursive:true});await writeFile(local,JSON.stringify(initial));
+  const local=path.join(here,'.private/forum',id,date+'.json');await mkdir(path.dirname(local),{recursive:true});const seed=local+'.seed-'+randomUUID();await writeFile(seed,JSON.stringify(initial));await rename(seed,local);
   const job={status:'queued',visits:0,message:'已加入独立补读队列',allScope:!postIds.length,postIds:new Set(postIds),maxVisits:allMissing?6:1};jobs.set(k,job);
   const selected=postIds.length?initial.records.filter(r=>postIds.includes(r.id)):initial.records;if(selected.length&&(!postIds.length||selected.length===postIds.length)&&(postIds.length||selected.length>=30||initial.status==='complete')&&counts({...initial,records:selected}).pending===0){job.status='complete';job.promise=Promise.resolve();return get(id,date);}
   job.promise=(async()=>{let unchanged=0,last='';

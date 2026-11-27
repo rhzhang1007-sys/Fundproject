@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import{mkdtemp,mkdir,writeFile,rm}from'node:fs/promises';import path from'node:path';import os from'node:os';
+import{mkdtemp,mkdir,writeFile,rename,rm}from'node:fs/promises';import path from'node:path';import os from'node:os';
 import{createCloudState}from'../cloud-state.mjs';import{createForumService}from'../forum-service.mjs';import{createPublicMirror}from'../public-data-cache.mjs';
 const response=v=>({ok:true,text:async()=>JSON.stringify(v)});
 test('new Supabase secret stays server-side and is not misused as a JWT',async()=>{
@@ -18,7 +18,7 @@ test('cloud reservation uses atomic RPC, then idempotent settlement with no prov
 test('complete batch, body and comments survive a new backend instance without local runtime files',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'fund-cloud-state-')),date=new Date(Date.now()-86400000).toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),id='stock000001',rows=new Map();
  const store={read:async k=>rows.has(k)?{value:structuredClone(rows.get(k)),revision:1}:null,write:async(k,v)=>{rows.set(k,structuredClone(v));return{revision:1};}};
- const put=async(p,v)=>{p=path.join(root,p);await mkdir(path.dirname(p),{recursive:true});await writeFile(p,JSON.stringify(v));};
+ const put=async(p,v)=>{p=path.join(root,p);await mkdir(path.dirname(p),{recursive:true});await writeFile(p+'.tmp',JSON.stringify(v));await rename(p+'.tmp',p);};
  try{
   await put('dist/data/v10/objects.json',{objects:[{id}]});
   const forum=createForumService(root,{stateStore:store,runWorker:async()=>put('.private/forum/'+id+'/'+date+'.json',{objectId:id,date,status:'complete',records:[{id:'1',objectId:id,date,content:'业务进展',comments:[{id:'c',text:'关注公告'}],coverage:{body:'complete',comments:'complete'}}]})});

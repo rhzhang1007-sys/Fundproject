@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import http from 'node:http';
+import {mkdtemp,mkdir,writeFile,rename,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import http from 'node:http';
 import {createForumService} from '../forum-service.mjs';import {createHandler} from '../web-ai-server.mjs';
 const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn){for(let i=0;i<100;i++){const v=await fn();if(v)return v;await pause(5);}throw Error('Job did not settle');}
-async function fixture(work){const root=await mkdtemp(path.join(os.tmpdir(),'forum-reader-'));const put=async(p,v)=>{p=path.join(root,p);await mkdir(path.dirname(p),{recursive:true});await writeFile(p,JSON.stringify(v));};await put('dist/data/v10/objects.json',{objects:[{id:'stock1'},{id:'fund2'}]});try{await work({root,put});}finally{await rm(root,{recursive:true,force:true});}}
+async function fixture(work){const root=await mkdtemp(path.join(os.tmpdir(),'forum-reader-'));const put=async(p,v)=>{p=path.join(root,p);await mkdir(path.dirname(p),{recursive:true});await writeFile(p+'.tmp',JSON.stringify(v));await rename(p+'.tmp',p);};await put('dist/data/v10/objects.json',{objects:[{id:'stock1'},{id:'fund2'}]});try{await work({root,put});}finally{await rm(root,{recursive:true,force:true});}}
 function row(id,oid='stock1'){return {id,objectId:oid,date:day,content:'正文',comments:[],coverage:{body:'complete',comments:'complete'}};}
 test('single-post reading accepts known Sina identities, deduplicates work, and saves complete material',async()=>fixture(async({root,put})=>{
  let calls=0,release;const blocked=new Promise(r=>release=r);const service=createForumService(root,{runWorker:async(id,date,ids)=>{calls++;assert.deepEqual(ids,['sina:123:456']);await blocked;await put('.private/forum/'+id+'/'+date+'.json',{records:[row(ids[0])],status:'complete'});}});
