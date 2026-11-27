@@ -1,7 +1,8 @@
+import {apiURL} from './service-api.mjs';
 // Read every selected body before analysis. Long materials are digested in full, in bounded batches.
 import {requestAI} from './v08-ai.mjs';
 const cache=new Map(),encoder=new TextEncoder();
-export async function eventBody(event){if(cache.has(event.id))return cache.get(event.id);const promise=(async()=>{const r=await fetch('/api/news/body?eventId='+encodeURIComponent(event.id));const d=await r.json();if(!r.ok||d.coverage!=='full-text'||!d.body)throw Error(d.error||'正文暂时不可读取');return d;})();cache.set(event.id,promise);try{return await promise;}catch(e){cache.delete(event.id);throw e;}}
+export async function eventBody(event){if(cache.has(event.id))return cache.get(event.id);const promise=(async()=>{const r=await fetch(apiURL('/api/news/body?eventId='+encodeURIComponent(event.id)));const d=await r.json();if(!r.ok||d.coverage!=='full-text'||!d.body)throw Error(d.error||'正文暂时不可读取');return d;})();cache.set(event.id,promise);try{return await promise;}catch(e){cache.delete(event.id);throw e;}}
 export function splitBody(material,limit=24000){
  const text=String(material.text),out=[];let start=0;while(start<text.length){let lo=start,hi=text.length;while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(encoder.encode(text.slice(start,mid)).length<=limit)lo=mid;else hi=mid-1;}let end=lo;if(end<text.length){const p=text.lastIndexOf('\n',end);if(p>start+(end-start)*.5)end=p+1;}if(end<=start)throw Error('正文分段失败');out.push({...material,id:material.id+'#part'+(out.length+1),text:text.slice(start,end)});start=end;}return out;
 }

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: fundproject-api
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    autoDeployTrigger: off
+    healthCheckPath: /api/health
+    envVars:
+      - key: WEB_LLM_API_URL
+        value: https://api.zhizengzeng.com/v1/chat/completions
+      - key: WEB_LLM_API_KEY
+        sync: false
+      - key: WEB_LLM_MODEL
+        value: glm-5.3-flash
+      - key: WEB_LLM_FALLBACK_URL
+        value: https://api.zzz-api.top/v1/chat/completions
+      - key: WEB_LLM_DAILY_BUDGET
+        value: '5'
+      - key: WEB_LLM_ORIGIN
+        value: https://rhzhang1007-sys.github.io
+      - key: WEB_STATE_URL
+        sync: false
+      - key: WEB_STATE_KEY
+        sync: false
+      - key: WEB_STATE_REQUIRED
+        value: 'true'

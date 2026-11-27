@@ -1,3 +1,4 @@
+import {createDataFetcher} from './data-source.mjs';
 import {loadPublicData} from './v09-public-data.mjs';
 import {safeUrl} from './core.mjs';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,8 +16,9 @@ export function validateRelations(data,code,{asOf=null}={}){
  return {disclosure:{...data,holdings:undefined},holdings:data.holdings.map(x=>({...x,weight:x.weightPercent}))};
 }
 export function createObjectStore({fetcher=fetch}={}){
+ const fetchJSON=createDataFetcher({fetcher});
  const cache=new Map();let registry,manifest;
- async function json(path){if(!cache.has(path))cache.set(path,(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),10000);try{const r=await fetcher('./data/v10/'+path,{signal:ctl.signal,credentials:'omit'});if(!r.ok)throw Error('资料暂时无法读取');const value=await r.json();return /^\.\.\/v(?:11\/observations|12\/factors)\//.test(path)?await loadPublicData(path.slice(3),value,{fetcher,timeout:3000}):value;}finally{clearTimeout(timer);}})().catch(e=>{cache.delete(path);throw e;}));return cache.get(path);}
+ async function json(path){if(!cache.has(path))cache.set(path,(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),10000);try{const r=await fetchJSON('./data/v10/'+path,{signal:ctl.signal,credentials:'omit'});if(!r.ok)throw Error('资料暂时无法读取');const value=await r.json();return /^\.\.\/v(?:11\/observations|12\/factors)\//.test(path)?await loadPublicData(path.slice(3),value,{fetcher,timeout:3000}):value;}finally{clearTimeout(timer);}})().catch(e=>{cache.delete(path);throw e;}));return cache.get(path);}
  async function objects(){if(!registry){const d=await json('objects.json');if(!Array.isArray(d.objects)||new Set(d.objects.map(x=>x.id)).size!==d.objects.length)throw Error('对象目录无效');registry=d.objects;}return registry;}
  async function card(id){const {kind,code}=objectIdentity(id),d=await json(`foundation/${kind}s/${objectShard(code)}.json`);const value=d.cards?.find(x=>x.id===id&&x.code===code&&x.kind===kind);if(!value)throw Error('未收录该对象');return value;}
  async function relations(code,options){manifest??=await json('foundation-manifest.json');if(!manifest.holdingsInterface?.enabled)return null;if(manifest.holdingsInterface.schema==='fund-holdings-relations-v2'){const d=await json(`../v11/relationships/${objectShard(code)}.json`);return validateRelations(d.funds[code]||{fundCode:code,status:'not-collected',periods:[]},code,options);}return validateRelations(await json(`relationships/${code}.json`),code);}

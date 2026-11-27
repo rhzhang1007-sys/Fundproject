@@ -9,7 +9,7 @@ def build(root=ROOT):
  root=Path(root);stage=root/'tmp/global-coverage-2026-11-24/public-release';output=root/'output/持仓知见-当前公开交付'
  if stage.exists():shutil.rmtree(stage)
  stage.mkdir(parents=True);output.mkdir(parents=True,exist_ok=True);prepare(root,stage/'prototype/dist')
- files=['.github/workflows/'+n for n in ['daily-public-data.yml','global-forum.yml','check-model.yml','publish-pages.yml','daily-nav.yml','daily-index.yml','forum-watchdog.yml']]
+ files=['.github/workflows/'+n for n in ['daily-public-data.yml','global-forum.yml','check-model.yml','publish-pages.yml','daily-nav.yml','daily-index.yml','forum-watchdog.yml','check-backend-image.yml']]
  files+=['prototype/config/'+n for n in ['public-updates.json','llm-pricing.json','model-check-request.json','global-forum-bootstrap.json','public-source-review.json']]
  files+=['prototype/scripts/'+n for n in ['refresh_public_data.py','public_news.py','public_transport.py','market_public.py','daily_pipeline.py','prepare_v08_public_site.py','check_model_connection.py','build_global_foundation.py','global_forum.py','public_comments.py','publish_object_activity.py','news_llm_queue.py','github_corpus_cache.py','package_public_release.py','collect_nav_snapshot.py','sync_nav_observations.py','compute_daily_factors.py','update_market_observations.py','publish_news_shards.py','build_index_metrics.py','update_resolved_indices.py','sina_forum.py','forum_object.py','sync_analysis_v3.py','collect_fast_news_daily.py']]
  files+=['prototype/tests/'+n for n in ['test_public_updates.py','test_public_updates_regressions.py','test_news_pipeline.py','test_global_pipeline.py','test_global_corpus.py','v08-model.test.mjs','v08-ai.test.mjs','v09-industry.test.mjs','v09-public-data.test.mjs','v10-objects.test.mjs','web-ai-server.test.mjs','test_daily_factors.py','test_index_observations.py','test_forum_sources.py','v13-analysis.test.mjs']]
@@ -20,12 +20,14 @@ def build(root=ROOT):
  files+=['prototype/scripts/public_post_material.py','prototype/tests/test_material_recovery.py','prototype/tests/ai-results.test.mjs','docs/数据覆盖与AI结果-v18.md']
  files+=['prototype/scripts/forum_schedule.py','prototype/scripts/forum_continue.py','prototype/tests/test_forum_schedule.py','prototype/tests/forum-service.test.mjs','prototype/tests/ai-result-policy.test.mjs','docs/五点采集与独立补读-v20.md']
  files+=['prototype/scripts/daily_dispatch.py','prototype/tests/test_daily_dispatch.py','docs/日更触发与补跑-v21.md']
+ files+=['Dockerfile','.dockerignore','prototype/tests/service-api.test.mjs','docs/Pages与后台部署-v22.md']
+ files+=['render.yaml','deploy/supabase-state.sql','prototype/cloud-state.mjs','prototype/public-data-cache.mjs','prototype/tests/cloud-state.test.mjs','prototype/tests/data-source.test.mjs','prototype/tests/test_pages_package.py','docs/免费部署操作步骤-v23.md']
  for name in files:
   target=stage/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,target)
  (stage/'.gitignore').write_text('.DS_Store\n__pycache__/\n*.pyc\n.env\n.env.*\n!**/.env.example\n**/.private/\n**/.public-corpus/\n**/.runtime/\nnode_modules/\ntmp/\n')
  (stage/'README.md').write_text('''# 持仓知见 · 全目录对象与每日公开数据
 
-2026-11-26研究v16：首次打开直接显示九基金持仓，持仓分析加入尾部风险、滚动持有体验、明确对象的相似基金与同权重结构对照；所有计算来自现有验收数据。
+2026-11-27部署v23：Pages分层数据包、Render Free后台、Supabase Free状态库已准备。部署步骤见[免费部署](docs/免费部署操作步骤-v23.md)。首次打开直接显示九基金持仓，持仓分析加入尾部风险、滚动持有体验、明确对象的相似基金与同权重结构对照；所有计算来自现有验收数据。
 
 当前网页可按需查找目录内28,405个基金代码、6,190个股票档案；基金28,202个有基础详情、203个保留无详情状态。此为来源目录范围，不是全部法律字段或完整真实持仓验收。基金基础没有行业配置字段，原两基金报告行业数据另存。
 
@@ -58,7 +60,7 @@ GitHub净值日更05:10、已解析指数05:20、新闻05:30（北京时间）�
   for item in manifest:z.write(stage/item['path'],item['path'])
  with zipfile.ZipFile(archive) as z:
   if z.testzip():raise ValueError('Public archive integrity error')
- (output/'交付说明.md').write_text('本包由公开白名单生成，当前任务报告见 ../五点采集与独立补读-2026-11-26/验收状态.json 。网站未发布。新API留空，配置见包内docs/默认AI与自选AI配置.md。恢复前须保留远端最新账本和私有缓存指针。\n')
+ (output/'交付说明.md').write_text('本包由公开白名单生成，当前任务报告见 ../免费部署与Pages数据接入-2026-11-27/验收状态.json 。部署步骤见包内docs/免费部署操作步骤-v23.md。网站发布状态以验收记录为准。恢复前须保留远端最新账本和私有缓存指针。\n')
  return dict(files=len(manifest),bytes=sum(x['bytes'] for x in manifest),zipBytes=archive.stat().st_size,stage=str(stage),archive=str(archive))
 
 if __name__=='__main__':print(json.dumps(build(),ensure_ascii=False))

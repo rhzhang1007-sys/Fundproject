@@ -1,0 +1,21 @@
+# Deny everything, then include only the application's public source and data.
+**
+!Dockerfile
+!prototype/
+!prototype/*.mjs
+!prototype/requirements-*.txt
+!prototype/scripts/
+!prototype/scripts/*.py
+!prototype/config/
+!prototype/config/*.json
+!prototype/dist/
+!prototype/dist/**
+**/.env*
+**/.private/
+**/.public-corpus/
+**/.runtime/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/.DS_Store
+**/.git/

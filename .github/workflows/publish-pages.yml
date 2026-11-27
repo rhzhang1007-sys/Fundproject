@@ -39,9 +39,18 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test application and prepare public-only directory
+        env:
+          PUBLIC_API_ORIGIN: ${{ vars.PUBLIC_API_ORIGIN }}
         run: |
           node --test prototype/tests/v08-model.test.mjs prototype/tests/v08-ai.test.mjs prototype/tests/v09-industry.test.mjs prototype/tests/v09-public-data.test.mjs
-          python prototype/scripts/prepare_v08_public_site.py --destination tmp/public-site
+          python - <<'PY'
+          import sys,subprocess,os
+          from pathlib import Path
+          sys.path.insert(0,'prototype/scripts')
+          from prepare_v08_public_site import prepare,ROOT
+          revision=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          prepare(ROOT,ROOT/'tmp/public-site',profile='pages',revision=revision,api_origin=os.environ.get('PUBLIC_API_ORIGIN',''))
+          PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

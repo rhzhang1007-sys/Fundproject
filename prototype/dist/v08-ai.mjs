@@ -1,3 +1,4 @@
+import {apiURL} from './service-api.mjs';
 import {safeUrl} from './core.mjs';
 import {resolveResult} from './ai-result-policy.mjs';
 import {ANALYSIS_PROMPTS} from './v14-prompts.mjs';
@@ -44,7 +45,7 @@ export function resolveAIResult(raw,task,materials,question=''){return resolveRe
 export async function requestAI(cfg,task,materials,question=''){
  if((cfg.mode||'custom')==='shared'){
   const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),100000);
-  try{const r=await fetch('/api/ai',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({task,materials,question})});const data=await r.json();if(!r.ok)throw Error(data.error||'默认AI暂不可用');return {...resolveAIResult(JSON.stringify(data.result),task,materials,question),...(data.result.quality?{quality:data.result.quality}:{})};}finally{clearTimeout(timer);}
+  try{const r=await fetch(apiURL('/api/ai'),{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({task,materials,question})});const data=await r.json();if(!r.ok)throw Error(data.error||'默认AI暂不可用');return {...resolveAIResult(JSON.stringify(data.result),task,materials,question),...(data.result.quality?{quality:data.result.quality}:{})};}finally{clearTimeout(timer);}
  }
  if(!cfg.url||!cfg.key||!cfg.model)throw Error('请先在设置中填写模型接口');
  let parsed;try{parsed=new URL(cfg.url);if(['/','/v1','/v1/'].includes(parsed.pathname))parsed.pathname='/v1/chat/completions';}catch{throw Error('接口地址无效');}if(!['https:','http:'].includes(parsed.protocol))throw Error('接口地址无效');

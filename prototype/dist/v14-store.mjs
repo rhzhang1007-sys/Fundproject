@@ -1,8 +1,10 @@
 import {objectShard} from './v10-objects.mjs';
+import {createDataFetcher} from './data-source.mjs';
 import {PUBLIC_DATA_BASE} from './v09-public-data.mjs';
 export function createV7Store(fetcher=fetch){
+ const fetchJSON=createDataFetcher({fetcher});
  const cache=new Map(),local='./data/v14/',remote=PUBLIC_DATA_BASE+'v14/';let chosen;
- async function read(base,path){const key=base+path;if(!cache.has(key))cache.set(key,(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),path==='manifest.json'?6000:20000);try{const r=await fetcher(key,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:ctl.signal});if(!r.ok)throw Error('本次分析数据尚未接入');return await r.json();}finally{clearTimeout(timer);}})().catch(e=>{cache.delete(key);throw e;}));return cache.get(key);}
+ async function read(base,path){const key=base+path;if(!cache.has(key))cache.set(key,(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),path==='manifest.json'?6000:20000);try{const r=await fetchJSON(key,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:ctl.signal});if(!r.ok)throw Error('本次分析数据尚未接入');return await r.json();}finally{clearTimeout(timer);}})().catch(e=>{cache.delete(key);throw e;}));return cache.get(key);}
  const valid=m=>m?.schemaVersion===1&&typeof m.version==='string'&&Array.isArray(m.calendar)&&m.method;
  async function choose(){if(!chosen)chosen=(async()=>{const [a,b]=await Promise.allSettled([read(local,'manifest.json'),read(remote,'manifest.json')]),l=a.status==='fulfilled'&&valid(a.value)?a.value:null,r=b.status==='fulfilled'&&valid(b.value)?b.value:null;
   if(r&&(!l||(r.withAdjustedHistory??0)>=(l.withAdjustedHistory??0)&&r.method===l.method&&(r.asOf>l.asOf||r.asOf===l.asOf&&r.builtAt>l.builtAt)))return {base:remote,manifest:r};if(l)return {base:local,manifest:l};if(r)return {base:remote,manifest:r};throw Error('本次分析数据尚未接入');})();return chosen;}

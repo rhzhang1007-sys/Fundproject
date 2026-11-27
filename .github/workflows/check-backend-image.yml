@@ -1,0 +1,53 @@
+name: Check backend Docker image
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - render.yaml
+      - 'deploy/**'
+      - 'prototype/web-ai-server.mjs'
+      - 'prototype/cloud-state.mjs'
+      - 'prototype/public-data-cache.mjs'
+      - 'prototype/forum-service.mjs'
+      - 'prototype/news-service.mjs'
+      - 'prototype/requirements-*.txt'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: check-backend-image
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate the Pages data package
+        run: python -m unittest discover -s prototype/tests -p 'test_pages_package.py'
+      - name: Build the backend without deploying
+        run: docker build --tag fundproject-api:check .
+      - name: Verify runtime, dependencies and secret exclusion
+        run: |
+          docker run --detach --name fundproject-api-check --publish 127.0.0.1:18080:10000 --env WEB_LLM_SERVICE_ORIGIN=http://127.0.0.1:18080 --env WEB_LLM_ORIGIN=http://127.0.0.1:18080 fundproject-api:check
+          python - <<'PY'
+          import urllib.request,time,json
+          for attempt in range(30):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:18080/api/health',timeout=2) as r:
+                      assert json.load(r)['status']=='ok'
+                  break
+              except Exception:
+                  if attempt==29:raise
+                  time.sleep(1)
+          PY
+          docker exec fundproject-api-check python -c 'import pypdf,xlrd; print("PDF and spreadsheet readers ready")'
+          docker exec fundproject-api-check node --input-type=module -e 'import {existsSync} from "node:fs"; for(const p of ["/app/prototype/.env.local","/app/prototype/.runtime","/app/prototype/.public-corpus"]) if(existsSync(p)) throw Error("Private path in image"); console.log("Private inputs excluded")'
+      - name: Stop the test container
+        if: always()
+        run: docker rm --force fundproject-api-check || true

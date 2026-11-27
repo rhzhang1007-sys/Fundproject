@@ -17,3 +17,35 @@ test('站方只填写API站点或v1根地址时自动补全接口路径',async()
 test('v7预设在共享接口使用统一提示，访客问题不能替换系统规则',async()=>fixture(async({base,received})=>{const response=await post(base,{...body,task:'analysis_limits',question:'说明这些材料的限制'});assert.equal(response.status,200);const sent=JSON.parse(received().body);assert.match(sent.messages[0].content,/crossCheck=agree/);assert.match(sent.messages[0].content,/累计净值比值不等于分红再投资收益/);assert.match(sent.messages[1].content,/说明这些材料的限制/);}));
 test('引用编号缺失保留文字但不编造来源',async()=>fixture(async({base})=>{const r=await post(base);assert.equal(r.status,200);const d=await r.json();assert.deepEqual(d.result.points[0].sourceIds,[]);assert.ok(d.result.quality.unmappedBlocks);},{upstream:async()=>({ok:true,text:async()=>JSON.stringify({choices:[{message:{content:JSON.stringify({title:'摘要',points:[{text:'项目继续推进',sourceIds:['fake']}]})}}],usage:{prompt_tokens:10,completion_tokens:10}})})}));
 test('模型返回普通文字也保留结果，不因JSON格式丢弃',async()=>fixture(async({base})=>{const r=await post(base);assert.equal(r.status,200);const d=await r.json();assert.equal(d.result.points[0].text,'项目继续推进');},{upstream:async()=>({ok:true,text:async()=>JSON.stringify({choices:[{message:{content:'项目继续推进'}}],usage:{prompt_tokens:10,completion_tokens:10}})})}));
+test('Pages frontend and backend have different hosts; preflight and analysis use one exact allowed origin',async()=>fixture(async({base,key})=>{
+ const headers={Host:'fund-api.example.com',Origin:'https://rhzhang1007-sys.github.io'};
+ const pre=await request(base+'/api/ai',{method:'OPTIONS',headers:{...headers,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}});
+ assert.equal(pre.status,204);
+ const r=await post(base,body,headers);assert.equal(r.status,200);assert.ok(!(await r.text()).includes(key));
+ const bad=await request(base+'/api/ai',{method:'OPTIONS',headers:{...headers,Origin:'https://evil.test','Access-Control-Request-Method':'POST'}});assert.equal(bad.status,403);
+ assert.equal((await request(base+'/api/health',{headers:{Host:'fund-api.example.com'}})).status,200);
+ assert.equal((await request(base+'/api/health',{headers:{Host:'evil.test'}})).status,403);
+},{origin:'https://rhzhang1007-sys.github.io',serviceOrigin:'https://fund-api.example.com'}));
+test('CORS applies to AI status, news and both forum job endpoints, without granting credential or wildcard access',async()=>fixture(async({base})=>{
+ for(const route of ['/api/ai/status','/api/news/body','/api/forum','/api/forum/batch']){
+  const response=await new Promise((resolve,reject)=>{const req=http.request(base+route,{method:'OPTIONS',headers:{Host:'fund-api.example.com',Origin:'https://rhzhang1007-sys.github.io','Access-Control-Request-Method':route.includes('status')||route.includes('news')?'GET':'POST','Access-Control-Request-Headers':'content-type'}},res=>{res.resume();res.on('end',()=>resolve(res));});req.on('error',reject);req.end();});
+  assert.equal(response.statusCode,204);assert.equal(response.headers['access-control-allow-origin'],'https://rhzhang1007-sys.github.io');assert.equal(response.headers['access-control-allow-credentials'],undefined);
+ }
+ const bad=await request(base+'/api/ai',{method:'OPTIONS',headers:{Host:'fund-api.example.com',Origin:'https://rhzhang1007-sys.github.io','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization'}});assert.equal(bad.status,403);
+},{origin:'https://rhzhang1007-sys.github.io',serviceOrigin:'https://fund-api.example.com'}));
+test('local remains loopback by default; separate service origin validates path and explicit cloud listen host',async()=>{
+ const env={WEB_LLM_API_KEY:'',WEB_LLM_API_URL:'',WEB_LLM_MODEL:'',WEB_LLM_ORIGIN:'',WEB_LLM_SERVICE_ORIGIN:'',WEB_LLM_LISTEN_HOST:''};
+ assert.equal((await readServerConfig(env)).listenHost,'127.0.0.1');
+ const c=await readServerConfig({...env,WEB_LLM_ORIGIN:'https://rhzhang1007-sys.github.io',WEB_LLM_SERVICE_ORIGIN:'https://api.example.com/',WEB_LLM_LISTEN_HOST:'0.0.0.0'});assert.equal(c.serviceOrigin,'https://api.example.com');assert.equal(c.listenHost,'0.0.0.0');
+ await assert.rejects(()=>readServerConfig({...env,WEB_LLM_SERVICE_ORIGIN:'https://api.example.com/api'}));
+});
+test('a restarted free backend still uses the cloud reservation before paying for another model call',async()=>{
+ let ledger=null,calls=0;const stateStore={read:async()=>ledger?{value:structuredClone(ledger)}:null,reserveBudget:async(day,amount,budget)=>{ledger??={date:day,calls:0,costCNY:0,reservedCNY:0};if(ledger.costCNY+ledger.reservedCNY+amount>budget)throw Error('今日默认AI额度已用完，可使用自己的接口');ledger.calls++;ledger.reservedCNY+=amount;return{id:'r',ledger:structuredClone(ledger)};}};
+ const options={stateStore,budget:.025,upstream:async()=>{calls++;return{ok:false,status:500};}};
+ await fixture(async({base})=>assert.equal((await post(base)).status,502),options);
+ await fixture(async({base})=>{const r=await post(base);assert.equal(r.status,502);assert.match(await r.text(),/额度/);},options);assert.equal(calls,1);
+});
+test('successful model text is retained when usage settlement is temporarily unavailable; reservation remains',async()=>{
+ let saved;const stateStore={read:async()=>null,reserveBudget:async(day,amount)=>({id:'r',ledger:saved={date:day,calls:1,costCNY:0,reservedCNY:amount}}),settleBudget:async()=>{throw Error('unavailable');}};
+ await fixture(async({base})=>{const r=await post(base);assert.equal(r.status,200);assert.equal((await r.json()).result.points[0].text,'报告增长5%');assert.ok(saved.reservedCNY>0);},{stateStore});
+});
