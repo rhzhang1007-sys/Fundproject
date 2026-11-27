@@ -11,6 +11,12 @@ import daily_pipeline as d
 import refresh_public_data as u
 
 class NewsPipeline(unittest.TestCase):
+    def test_schedule_report_uses_actual_workflow_instead_of_a_stale_hardcoded_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);p=root/'.github/workflows/daily-public-data.yml';p.parent.mkdir(parents=True)
+            p.write_text("on:\n  schedule:\n    - cron: '30 21 * * *'\n    - cron: '31 23,1,3 * * *'\n")
+            r=d.preflight(root,{})
+            self.assertEqual(r['cronUTC'],'30 21 * * *');self.assertEqual(r['backupCronUTC'],'31 23,1,3 * * *')
     def index(self):return n.EntityIndex([dict(kind='stock',code='000001',name='平安银行',exchange='SZSE',matchKeywords=['平安银行','平安']),dict(kind='stock',code='601318',name='中国平安',exchange='SSE',matchKeywords=['中国平安','平安']),dict(kind='fund',code='000001',name='华夏成长混合'),dict(kind='fund',code='516160',name='新能源ETF南方')])
     def test_conflicts_are_candidates_not_labels_and_codes_have_roles(self):
         idx=self.index();tags,hints=idx.tag('平安发布消息；数量000001股')

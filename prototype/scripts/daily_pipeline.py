@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime,timedelta
 import json
 import os
+import re
 from pathlib import Path
 import time
 from zoneinfo import ZoneInfo
@@ -29,6 +30,8 @@ def progress(stage,**fields):
     print(json.dumps(dict(stage=stage,at=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'),**fields),ensure_ascii=False),flush=True)
 
 def preflight(root,config):
+    workflow=Path(root)/'.github/workflows/daily-public-data.yml'
+    crons=re.findall(r'''cron:\s*['"]([^'"]+)['"]''',workflow.read_text()) if workflow.exists() else []
     required=['prototype/dist/index.html','prototype/dist/data/v07/funds-l1.json','prototype/dist/data/v09/security-identities.json']
     if config.get('forumDaily',{}).get('mode')=='global-queue':required+=['prototype/dist/data/v10/objects.json','prototype/dist/data/v10/entity-aliases.json','prototype/dist/data/v10/foundation-manifest.json']
     missing=[name for name in required if not (root/name).is_file()]
@@ -41,7 +44,7 @@ def preflight(root,config):
         modelMatchesDiscussedSelection=bool(model and model.lower() in ('glm-5.3-flashx','glm-5.3-flash')),
         providerMatchesDiscussedSelection=bool(url and urlparse(url).hostname=='api.zhizengzeng.com'),
         endpointIsChatCompletions=bool(url and urlparse(url).path.rstrip('/').endswith('/chat/completions')),
-        cronUTC='50 0 * * *',backupCronUTC='31 1,3 * * *',timezone='Asia/Shanghai',credentialsIncluded=False)
+        cronUTC=crons[0] if crons else None,backupCronUTC=crons[1] if len(crons)>1 else None,timezone='Asia/Shanghai',credentialsIncluded=False)
 
 
 def run(root,config,collect=False,as_of=None,fetch=None):
