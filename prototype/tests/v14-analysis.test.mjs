@@ -7,6 +7,25 @@ const dates=Array.from({length:300},(_,i)=>new Date(Date.UTC(2025,0,i+1)).toISOS
 const history=()=>({quality:'clean',crossCheck:'agree',basis:'forward-adjusted-from-daily-growth',points:dates.map((d,i)=>[d,Math.exp(.0001*i+.01*Math.sin(i))]),filledFromNav:0,skipped:0});
 const fund=(code,amount=50000)=>({id:'fund'+code,code,name:'基金'+code,type:'股票型',amount,share:50,profile:{type:'股票型',currency:'CNY',fees:{management:'0.5%',custody:'0.1%'}},adjusted:history(),detailPeriods:[{asOf:'2026-06-30',complete:false,rows:[{code:'600000',name:'股票',weight:42.62}]}]});
 test('a failed source inside a saved partial run retains its bounded backup opportunity',()=>{assert.equal(shouldRun({job:'news',executionDay:'2026-11-25',executed:true,retryNeeded:true},'news','2026-11-25'),true);});
+test('legacy incomplete markers retry with a cooldown and daily cap, without claiming source completeness',()=>{
+ const marker={job:'nav',executionDay:'2026-11-27',executed:true,adapter:'eastmoney-daily-nav-v2',retryNeeded:false,sourceCoverageStatus:'incomplete',at:'2026-11-27T05:10:00+08:00',attemptsToday:1};
+ assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T05:20:00+08:00')),false);
+ assert.equal(shouldRun(marker,'nav','2026-11-27',{},new Date('2026-11-27T06:00:00+08:00')),true);
+ assert.equal(shouldRun({...marker,attemptsToday:4},'nav','2026-11-27',{},new Date('2026-11-27T09:00:00+08:00')),false);
+ assert.equal(shouldRun({...marker,attemptsToday:4},'nav','2026-11-28'),true);
+ assert.equal(shouldRun({...marker,sourceCoverageStatus:'source-bounded'},'nav','2026-11-27'),false);
+});
+test('source incomplete state becomes retryable; marking records attempts instead of hiding the remaining gap',async()=>{
+ const root=await mkdtemp(path.join(os.tmpdir(),'fund-runtime-partial-'));
+ try{
+  const p=path.join(root,'prototype/dist/data/v12/nav');await mkdir(p,{recursive:true});
+  await writeFile(path.join(p,'latest.json'),JSON.stringify({fetchedAt:'2026-11-27T05:10:00+08:00',sourceAdapter:'eastmoney-daily-nav-v2',meta:{freshRecords:25000,reusedRecords:100},status:'incomplete'}));
+  const a=await runtime({action:'mark',job:'nav',root,day:'2026-11-27'});
+  assert.equal(a.retryNeeded,true);assert.equal(a.attemptsToday,1);assert.equal(a.sourceCoverageComplete,false);
+  const b=await runtime({action:'mark',job:'nav',root,day:'2026-11-27'});
+  assert.equal(b.attemptsToday,process.env.GITHUB_RUN_ID?1:2);
+ }finally{await rm(root,{recursive:true,force:true});}
+});
 test('v7 accepts 19-row half-year detail without claiming completeness; excludes quarter-only overlap',()=>{const a=fund('1'),b=fund('2');a.detailPeriods[0].rows=Array.from({length:19},(_,i)=>({code:String(i),weight:3}));assert.equal(detailPeriods(a).length,1);assert.equal(structureV7([a]).ready,false);a.share=100;assert.equal(structureV7([a]).ready,true);assert.equal(structureV7([a]).complete,false);b.detailPeriods[0].asOf='2026-09-30';assert.equal(overlapV7([a,b]).pairs.length,0);});
 test('v7 raw weights and unequal amounts use both matched sides; fee missing remains unknown',()=>{const a=fund('1'),b=fund('2');let r=overlapV7([a,b]).pairs[0];assert.ok(Math.abs(r.amount-42620)<1e-7);b.amount=10000;r=overlapV7([a,b]).pairs[0];assert.ok(Math.abs(r.amount-8524)<1e-7);assert.equal(r.complete,false);assert.equal(feeParts(a.profile).total,null);assert.ok(Math.abs(r.feeEstimate-51.144)<1e-8);});
 test('screening agreement is required but never becomes verified total return; gaps/fills/flags blocked',()=>{const f=fund('1'),n=f.adjusted;assert.equal(checkedNav(n,f.profile,dates,dates.at(-1)).verifiedTotalReturn,false);for(const change of [{crossCheck:'divergent'},{crossCheck:undefined},{filledFromNav:1},{skipped:1},{quality:'flagged'}])assert.equal(checkedNav({...n,...change},f.profile,dates,dates.at(-1)).ready,false);const bad={...n,points:n.points.filter((_,i)=>i!==40)};assert.equal(checkedNav(bad,f.profile,dates,dates.at(-1)).ready,false);assert.equal(checkedNav(n,{type:'货币型'},dates,dates.at(-1)).ready,false);});

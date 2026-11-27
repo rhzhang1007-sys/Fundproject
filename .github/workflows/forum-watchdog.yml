@@ -18,6 +18,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Wake overdue NAV, index and news jobs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/daily_dispatch.py
       - name: Resume an overdue collector when no run is active
         env:
           GITHUB_TOKEN: ${{ github.token }}

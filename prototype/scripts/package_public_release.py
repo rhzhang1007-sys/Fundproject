@@ -19,6 +19,7 @@ def build(root=ROOT):
  files+=['prototype/scripts/forum_quality.py','prototype/scripts/forum_repair.py','prototype/scripts/forum_watchdog.py','prototype/tests/discussion-reliability.test.mjs','prototype/tests/test_forum_quality.py','docs/帖子分析与自动抽检-v19.md']
  files+=['prototype/scripts/public_post_material.py','prototype/tests/test_material_recovery.py','prototype/tests/ai-results.test.mjs','docs/数据覆盖与AI结果-v18.md']
  files+=['prototype/scripts/forum_schedule.py','prototype/scripts/forum_continue.py','prototype/tests/test_forum_schedule.py','prototype/tests/forum-service.test.mjs','prototype/tests/ai-result-policy.test.mjs','docs/五点采集与独立补读-v20.md']
+ files+=['prototype/scripts/daily_dispatch.py','prototype/tests/test_daily_dispatch.py','docs/日更触发与补跑-v21.md']
  for name in files:
   target=stage/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,target)
  (stage/'.gitignore').write_text('.DS_Store\n__pycache__/\n*.pyc\n.env\n.env.*\n!**/.env.example\n**/.private/\n**/.public-corpus/\n**/.runtime/\nnode_modules/\ntmp/\n')
@@ -32,7 +33,7 @@ def build(root=ROOT):
 
 新闻按批量来源抓取再打标签，未归属材料保留。论坛遍历统一目录并续跑，去掉119对象白名单；帖子正文及评论按对象分片下发，按需收藏或分析，实际覆盖见data/v10/coverage.json。已建档不表示素材全部采齐。只保留30天动态；只有标题的公告不生成全文摘要。
 
-GitHub净值日更08:30、已解析指数08:40、新闻08:50（北京时间），论坛队列05:05切换昨日目标，每20分钟继续，部分批次主动续跑，可能延迟。定时任务只采集新闻、帖子正文和评论，不再运行观点聚合或新闻模型。模型按用户选择在网页调用；v7分析已有统一预设prompt。后台完整语料使用Actions自带GITHUB_TOKEN保存私有draft release检查点，不会公开发布Release。新网页AI的Key仍须站方在服务端单独填写。
+GitHub净值日更05:10、已解析指数05:20、新闻05:30（北京时间），论坛队列05:05切换昨日目标，每20分钟继续，部分批次主动续跑，可能延迟。定时任务只采集新闻、帖子正文和评论，不再运行观点聚合或新闻模型。模型按用户选择在网页调用；v7分析已有统一预设prompt。后台完整语料使用Actions自带GITHUB_TOKEN保存私有draft release检查点，不会公开发布Release。新网页AI的Key仍须站方在服务端单独填写。
 
 网站发布开关保持false，未修改Team Hub。2026-11-26已复核并接入7422个持仓展示分片、13390份原始净值历史、12714份复权历史。默认最新一期，可切换报告日；100行上限不当成完整披露，原已核110行中报保留。缺失未补采，未修改或停止WorkBuddy采集。用户组合只留在各自浏览器。
 

@@ -76,5 +76,10 @@
     "enabled": false,
     "maxCallsPerBatch": 3,
     "maxRecordsPerBatch": 8
+  },
+  "dailyDispatch": {
+    "enabled": true,
+    "maxAttemptsPerDay": 4,
+    "retryMinutes": 45
   }
 }

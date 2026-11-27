@@ -51,6 +51,11 @@ jobs:
           print('enabled='+str(enabled and (allowed or '${{ inputs.verify_checkpoint_only }}'=='true')).lower())
           print('reason='+reason)
           PYTHON
+      - name: Wake overdue NAV, index and news jobs
+        if: success() && inputs.verify_checkpoint_only != true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python prototype/scripts/daily_dispatch.py
       - name: Restore private resumable corpus
         id: corpus_restore
         if: steps.gate.outputs.enabled == 'true'
