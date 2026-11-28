@@ -7,6 +7,7 @@ import shutil
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
+PAGES_TARGET_BYTES = 850_000_000
 
 
 def prepare(root, destination, *, profile='full', revision='', api_origin=None):
@@ -79,11 +80,21 @@ def prepare(root, destination, *, profile='full', revision='', api_origin=None):
         text=re.sub(r"export const DATA_REVISION=.*?;",'export const DATA_REVISION='+json.dumps(revision)+';',text)
         if api_origin is not None:text=re.sub(r"export const API_ORIGIN=.*?;",'export const API_ORIGIN='+json.dumps(api_origin.rstrip('/'))+';',text)
         cfg.write_text(text)
+        # Forum material grows every day. Keep analysis/holdings local and move
+        # only large, public forum JSON to the existing immutable fallback reader.
+        files=[p for p in destination.rglob('*') if p.is_file()]
+        size=sum(p.stat().st_size for p in files)
+        initial_codes=set(re.findall(r"code:'([0-9]{6})'",initial))
+        movable=[p for folder in ['data/v10/activity','data/v12/posts'] for p in (destination/folder).rglob('*.json')]
+        movable.sort(key=lambda p:(p.parent.name=='funds' and p.stem in initial_codes,-p.stat().st_size,p.as_posix()))
+        for p in movable:
+            if size<=PAGES_TARGET_BYTES:break
+            size-=p.stat().st_size;p.unlink()
         files=[p for p in destination.rglob('*') if p.is_file()];size=sum(p.stat().st_size for p in files)
         omitted=[]
         for p in (source/'data').rglob('*.json'):
             rel=p.relative_to(source)
-            shifted=rel.as_posix().startswith(('data/v11/observations/','data/v12/nav/'))
+            shifted=rel.as_posix().startswith(('data/v11/observations/','data/v12/nav/','data/v10/activity/','data/v12/posts/'))
             if shifted and not (destination/rel).exists():omitted.append(dict(path=rel.as_posix(),url=f'https://raw.githubusercontent.com/rhzhang1007-sys/Fundproject/{revision}/prototype/dist/{rel.as_posix()}'))
         report=dict(profile='pages',revision=revision,siteBytes=size,limitBytes=1_000_000_000,remoteFiles=omitted,localDataFiles=sum(1 for p in files if p.suffix=='.json'),sourceDataDeleted=False)
         (destination/'pages-data-index.json').write_text(json.dumps(report,ensure_ascii=False,separators=(',',':')))

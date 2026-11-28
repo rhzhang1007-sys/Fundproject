@@ -1,10 +1,11 @@
 import unittest,tempfile,json,re,sys
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from prepare_v08_public_site import prepare,ROOT
 
 class Pages(unittest.TestCase):
- def test_pages_package_preserves_all_analysis_and_holding_shards_while_moving_only_large_observations_to_versioned_reading(self):
+ def test_pages_package_preserves_all_analysis_and_holding_shards_with_versioned_large_data_reading(self):
   with tempfile.TemporaryDirectory() as tmp:
    dest=Path(tmp)/'site';revision='a'*40;prepare(ROOT,dest,profile='pages',revision=revision)
    report=json.loads((dest/'pages-data-index.json').read_text());self.assertLess(report['siteBytes'],950_000_000);self.assertFalse(report['sourceDataDeleted']);self.assertTrue(report['remoteFiles'])
@@ -16,6 +17,14 @@ class Pages(unittest.TestCase):
    self.assertEqual({p.stem for p in (dest/'data/v11/observations').glob('*.json')},keys)
    for item in report['remoteFiles']:self.assertIn('/'+revision+'/prototype/dist/data/',item['url'])
    self.assertIn(revision,(dest/'deployment-config.mjs').read_text());self.assertFalse(list(dest.rglob('.env*')))
+ def test_forum_growth_moves_public_material_without_removing_source_data(self):
+  with tempfile.TemporaryDirectory() as tmp,patch('prepare_v08_public_site.PAGES_TARGET_BYTES',1):
+   dest=Path(tmp)/'site';revision='b'*40;prepare(ROOT,dest,profile='pages',revision=revision)
+   report=json.loads((dest/'pages-data-index.json').read_text());forum=[x for x in report['remoteFiles'] if x['path'].startswith(('data/v10/activity/','data/v12/posts/'))]
+   self.assertTrue(forum)
+   for item in forum:
+    self.assertTrue((ROOT/'prototype/dist'/item['path']).is_file());self.assertFalse((dest/item['path']).exists());self.assertIn('/'+revision+'/prototype/dist/',item['url'])
+   self.assertTrue((dest/'data/v14/nav/00.json').is_file());self.assertTrue((dest/'data/v11/relationships/00.json').is_file())
  def test_pages_requires_an_immutable_data_ref(self):
   with tempfile.TemporaryDirectory() as tmp:self.assertRaises(ValueError,prepare,ROOT,Path(tmp)/'site',profile='pages',revision='main')
 if __name__=='__main__':unittest.main()
