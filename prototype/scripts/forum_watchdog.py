@@ -15,6 +15,12 @@ def decision(runs,now=None,stale_minutes=45):
     ordered=sorted(runs,key=lambda r:r.get('updated_at') or r.get('created_at') or '',reverse=True)
     if not ordered:return dict(dispatch=True,reason='no-collector-run')
     stamp=ordered[0].get('updated_at') or ordered[0]['created_at'];age=(now-datetime.fromisoformat(stamp.replace('Z','+00:00'))).total_seconds()/60
+    failures=0
+    for run in ordered:
+        if run.get('conclusion') not in ('failure','timed_out','startup_failure'):break
+        failures+=1
+    if 0<failures<3:
+        return dict(dispatch=True,reason='retry-failed-collector',lastRunId=ordered[0].get('id'),consecutiveFailures=failures,minutesSinceRun=round(age,1))
     return dict(dispatch=age>stale_minutes,reason='collector-overdue' if age>stale_minutes else 'recent-collector-run',lastRunId=ordered[0].get('id'),minutesSinceRun=round(age,1))
 
 def run(root=ROOT,requester=None):

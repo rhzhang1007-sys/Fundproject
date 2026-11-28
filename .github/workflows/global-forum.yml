@@ -126,8 +126,7 @@ jobs:
           if test -f prototype/dist/data/v08/llm-cache.json; then git add prototype/dist/data/v08/llm-cache.json; fi
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Continue full-directory forum queue and public activity'
-          git -c rebase.autoStash=true pull --rebase
-          git push
+          python prototype/scripts/git_publish_retry.py
       - name: Continue a productive partial batch
         if: success() && steps.gate.outputs.enabled == 'true' && inputs.verify_checkpoint_only != true
         env:
