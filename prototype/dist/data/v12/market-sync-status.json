@@ -1,1 +1,1 @@
-{"asOf":"2026-11-27","seconds":2.662,"checks":[{"kind":"calendar","status":"updated","to":"2026-11-27"},{"kind":"hs300","status":"updated","to":"2026-11-27"},{"kind":"csi930997","status":"updated","to":"2026-11-27"}],"status":"success"}
+{"asOf":"2026-11-27","seconds":21.073,"checks":[{"kind":"calendar","status":"partial","reason":"Public source unavailable: HTTP 000"},{"kind":"hs300","status":"partial","reason":"Public source unavailable: HTTP 000"},{"kind":"csi930997","status":"partial","reason":"Public source unavailable: HTTP 000"}],"status":"partial"}
